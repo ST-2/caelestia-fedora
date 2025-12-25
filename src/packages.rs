@@ -20,12 +20,14 @@ const PACKAGES: &[&str] = &[
     "tuigreet",
     // Qt6 (for building quickshell)
     "qt6-qtbase-devel",
+    "qt6-qtbase-private-devel",     // For Qt6 private APIs (QuickPrivate)
     "qt6-qtdeclarative-devel",
     "qt6-qtdeclarative-static",
     "qt6-qtbase-static",
     "qt6-qtwayland-devel",
     "qt6-qtsvg-devel",
     "qt6-qtshadertools-devel",
+    "qt6-qtconnectivity-devel",     // For Bluetooth (required by Quickshell)
     "spirv-tools",
     "cli11-devel",
     "jemalloc-devel",
@@ -218,8 +220,12 @@ pub fn install_quickshell(dry_run: bool) -> Result<()> {
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
+        // Log both stdout and stderr for CMake configure errors
+        log::log("=== CMAKE CONFIGURE STDOUT ===");
+        log::log_output(&stdout);
+        log::log("=== CMAKE CONFIGURE STDERR ===");
         log::log_error(&stderr);
-        bail!("Failed to configure Quickshell");
+        bail!("Failed to configure Quickshell. Check ~/.cache/caelestia-installer/install.log for details.");
     }
 
     ui::success("Configured Quickshell");
@@ -236,8 +242,12 @@ pub fn install_quickshell(dry_run: bool) -> Result<()> {
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
+        // Log both stdout and stderr - CMake/Ninja output errors to stdout
+        log::log("=== BUILD STDOUT ===");
+        log::log_output(&stdout);
+        log::log("=== BUILD STDERR ===");
         log::log_error(&stderr);
-        bail!("Failed to build Quickshell");
+        bail!("Failed to build Quickshell. Check ~/.cache/caelestia-installer/install.log for details.");
     }
 
     ui::success("Built Quickshell");
@@ -645,9 +655,11 @@ fn verify_qt_packages() -> Result<()> {
     
     let critical_packages = &[
         "qt6-qtbase-devel",
+        "qt6-qtbase-private-devel",
         "qt6-qtdeclarative-devel", 
         "qt6-qtwayland-devel",
-        "qt6-qtbase-private-devel",
+        "qt6-qtshadertools-devel",
+        "qt6-qtconnectivity-devel",  // For Bluetooth (Quickshell)
         "cmake",
         "ninja-build",
         "gcc-c++",
