@@ -252,14 +252,14 @@ pub fn install_quickshell(dry_run: bool) -> Result<()> {
 
     // Clone Quickshell
     ui::info("Cloning Quickshell...");
-    let cmd = "git clone --recursive https://github.com/qt6cn/quickshell /tmp/quickshell";
+    let cmd = "git clone --recursive https://github.com/quickshell-mirror/quickshell /tmp/quickshell";
     log::log_command(cmd);
 
     let output = Command::new("git")
         .args([
             "clone",
             "--recursive",
-            "https://github.com/qt6cn/quickshell",
+            "https://github.com/quickshell-mirror/quickshell",
             "/tmp/quickshell",
         ])
         .output()?;
