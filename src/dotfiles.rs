@@ -94,7 +94,7 @@ pub fn build_shell(dry_run: bool) -> Result<()> {
     // CMake configure
     ui::info("Configuring caelestia-shell...");
     let cmake_cmd = format!(
-        "cmake -B {:?} -S {:?} -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/ -DINSTALL_QMLDIR=usr/lib64/qt6/qml -DINSTALL_LIBDIR=usr/lib64/caelestia",
+        "cmake -B {:?} -S {:?} -G Ninja -DCMAKE_BUILD_TYPE=Release -DINSTALL_QMLDIR=/usr/lib64/qt6/qml -DINSTALL_LIBDIR=/usr/lib64/caelestia",
         build_dir, shell_dir
     );
     log::log_command(&cmake_cmd);
@@ -108,16 +108,16 @@ pub fn build_shell(dry_run: bool) -> Result<()> {
             "-G",
             "Ninja",
             "-DCMAKE_BUILD_TYPE=Release",
-            "-DCMAKE_INSTALL_PREFIX=/",
-            "-DINSTALL_QMLDIR=usr/lib64/qt6/qml",
-            "-DINSTALL_LIBDIR=usr/lib64/caelestia",
+            "-DINSTALL_QMLDIR=/usr/lib64/qt6/qml",
+            "-DINSTALL_LIBDIR=/usr/lib64/caelestia",
         ])
         .output()?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         log::log_error(&stderr);
-        ui::warning("CMake configure failed");
+        ui::error("CMake configure failed:");
+        println!("{}", stderr); // Print directly to see it
         return Ok(());
     }
 
@@ -133,7 +133,8 @@ pub fn build_shell(dry_run: bool) -> Result<()> {
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         log::log_error(&stderr);
-        ui::warning("Shell build failed (continuing anyway)");
+        ui::error("Shell build failed:");
+        println!("{}", stderr);
         return Ok(());
     }
 
