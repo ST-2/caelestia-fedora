@@ -1,0 +1,9 @@
+pub mod checks;
+pub mod dotfiles;
+pub mod greetd;
+pub mod keybinds;
+pub mod log;
+pub mod packages;
+pub mod repos;
+pub mod shell;
+pub mod ui;

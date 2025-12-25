@@ -1,0 +1,13 @@
+[package]
+name = "caelestia-installer"
+version = "0.1.0"
+edition = "2021"
+description = "Installer for Caelestia Hyprland dotfiles on Fedora"
+authors = ["Astaria"]
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+colored = "2"
+anyhow = "1"
+which = "6"
+dirs = "5"
