@@ -70,6 +70,28 @@ pub fn install_cli(dry_run: bool) -> Result<()> {
         bail!("Failed to install caelestia-cli");
     }
 
+    // Create wrapper script in /usr/local/bin (pip doesn't always add to PATH)
+    ui::info("Creating caelestia wrapper script...");
+    let wrapper = "#!/bin/bash\nexec python3 -m caelestia \"$@\"\n";
+
+    let output = Command::new("sudo")
+        .args(["tee", "/usr/local/bin/caelestia"])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::null())
+        .spawn();
+
+    if let Ok(mut child) = output {
+        use std::io::Write;
+        if let Some(ref mut stdin) = child.stdin {
+            let _ = stdin.write_all(wrapper.as_bytes());
+        }
+        let _ = child.wait();
+    }
+
+    let _ = Command::new("sudo")
+        .args(["chmod", "+x", "/usr/local/bin/caelestia"])
+        .output();
+
     ui::success("Installed caelestia-cli");
     log::log("caelestia-cli installation complete");
 
