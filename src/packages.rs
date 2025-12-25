@@ -16,10 +16,20 @@ const PACKAGES: &[&str] = &[
     // Greetd
     "greetd",
     "tuigreet",
-    // Quickshell and Qt6
-    "quickshell",
+    // Qt6 (for building quickshell)
     "qt6-qtbase-devel",
     "qt6-qtdeclarative-devel",
+    "qt6-qtwayland-devel",
+    "qt6-qtsvg-devel",
+    "qt6-qtshadertools",
+    "spirv-tools",
+    "cli11-devel",
+    "jemalloc-devel",
+    // Wayland
+    "wayland-devel",
+    "wayland-protocols-devel",
+    "libdrm-devel",
+    "pipewire-devel",
     // Build tools
     "cmake",
     "ninja-build",
@@ -123,6 +133,104 @@ pub fn install_starship(dry_run: bool) -> Result<()> {
         log::log_error(&stderr);
         bail!("Failed to install Starship");
     }
+}
+
+pub fn install_quickshell(dry_run: bool) -> Result<()> {
+    ui::info("Installing Quickshell from source...");
+
+    if dry_run {
+        ui::success("Would build Quickshell from source (dry-run)");
+        return Ok(());
+    }
+
+    // Check if already installed
+    if which::which("quickshell").is_ok() {
+        ui::success("Quickshell already installed");
+        return Ok(());
+    }
+
+    let build_dir = std::path::PathBuf::from("/tmp/quickshell");
+
+    // Clone repo
+    if build_dir.exists() {
+        std::fs::remove_dir_all(&build_dir).ok();
+    }
+
+    let cmd = "git clone --depth 1 https://github.com/outfoxxed/quickshell /tmp/quickshell";
+    log::log_command(cmd);
+
+    let output = Command::new("git")
+        .args(["clone", "--depth", "1", "https://github.com/outfoxxed/quickshell", "/tmp/quickshell"])
+        .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::log_error(&stderr);
+        bail!("Failed to clone Quickshell");
+    }
+
+    ui::success("Cloned Quickshell");
+
+    // Configure with CMake
+    ui::info("Configuring Quickshell...");
+    let cmd = "cmake -B build -S /tmp/quickshell -G Ninja -DCMAKE_BUILD_TYPE=Release -DUSE_JEMALLOC=ON -DX11=OFF";
+    log::log_command(cmd);
+
+    let output = Command::new("cmake")
+        .args([
+            "-B", "/tmp/quickshell/build",
+            "-S", "/tmp/quickshell",
+            "-G", "Ninja",
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DUSE_JEMALLOC=ON",
+            "-DX11=OFF",
+        ])
+        .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::log_error(&stderr);
+        bail!("Failed to configure Quickshell");
+    }
+
+    ui::success("Configured Quickshell");
+
+    // Build
+    ui::info("Building Quickshell (this may take a while)...");
+    let cmd = "cmake --build /tmp/quickshell/build";
+    log::log_command(cmd);
+
+    let output = Command::new("cmake")
+        .args(["--build", "/tmp/quickshell/build"])
+        .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::log_error(&stderr);
+        bail!("Failed to build Quickshell");
+    }
+
+    ui::success("Built Quickshell");
+
+    // Install
+    ui::info("Installing Quickshell...");
+    let cmd = "sudo cmake --install /tmp/quickshell/build";
+    log::log_command(cmd);
+
+    let output = Command::new("sudo")
+        .args(["cmake", "--install", "/tmp/quickshell/build"])
+        .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::log_error(&stderr);
+        bail!("Failed to install Quickshell");
+    }
+
+    ui::success("Quickshell installed");
+    log::log("Quickshell installation complete");
+
+    Ok(())
 }
 
 pub fn install_rust(dry_run: bool) -> Result<()> {

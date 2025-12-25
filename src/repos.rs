@@ -5,7 +5,6 @@ use crate::{log, ui};
 
 const COPR_REPOS: &[&str] = &[
     "solopasha/hyprland",
-    "errornointernet/quickshell",
 ];
 
 pub fn add_all(dry_run: bool) -> Result<()> {
