@@ -103,9 +103,6 @@ bind = $mainMod, L, exec, hyprlock
 
 # Exit Hyprland
 bind = $mainMod SHIFT, E, exit
-
-# Gestures (v0.51+)
-gesture = 3, horizontal, workspace
 "#;
 
 pub fn setup_keybinds(dry_run: bool) -> Result<()> {

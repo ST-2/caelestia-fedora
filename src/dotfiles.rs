@@ -25,74 +25,20 @@ pub fn clone_repos(dry_run: bool) -> Result<()> {
     Ok(())
 }
 
-/// Patches deprecated `gestures:workspace_swipe` syntax in cloned dotfiles
-/// and replaces it with the modern Hyprland v0.51+ syntax.
-fn patch_gestures(dotfiles_dir: &PathBuf, dry_run: bool) -> Result<()> {
+/// Upstream dotfiles already use Hyprland v0.51+ gesture syntax.
+/// This function is kept as a no-op for compatibility but no patching is needed.
+fn patch_gestures(_dotfiles_dir: &PathBuf, dry_run: bool) -> Result<()> {
     if dry_run {
-        ui::info("Would patch gesture syntax (dry-run)");
+        ui::info("Gesture syntax already compatible with Hyprland v0.51+ (dry-run)");
         return Ok(());
     }
 
-    let hypr_dir = dotfiles_dir.join("hypr");
-    if !hypr_dir.exists() {
-        return Ok(());
-    }
-
-    // Find all .conf files in hypr directory
-    for entry in fs::read_dir(&hypr_dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.extension().map_or(false, |e| e == "conf") {
-            if let Ok(content) = fs::read_to_string(&path) {
-                // Check if file contains deprecated gesture syntax
-                if content.contains("gestures:workspace_swipe") || content.contains("gestures {") {
-                    ui::info(&format!("Patching gesture syntax in {:?}", path.file_name().unwrap()));
-                    
-                    let mut new_content = content.clone();
-                    
-                    // Remove deprecated gestures block
-                    // Match pattern like: gestures { ... }
-                    let lines: Vec<&str> = new_content.lines().collect();
-                    let mut filtered_lines = Vec::new();
-                    let mut in_gestures_block = false;
-                    let mut brace_count = 0;
-
-                    for line in lines {
-                        if line.trim().starts_with("gestures {") || line.trim().starts_with("gestures{") {
-                            in_gestures_block = true;
-                            brace_count = 1;
-                            continue;
-                        }
-                        if in_gestures_block {
-                            brace_count += line.matches('{').count() as i32;
-                            brace_count -= line.matches('}').count() as i32;
-                            if brace_count <= 0 {
-                                in_gestures_block = false;
-                            }
-                            continue;
-                        }
-                        // Also filter out single-line gesture options
-                        if line.trim().starts_with("gestures:") {
-                            continue;
-                        }
-                        filtered_lines.push(line);
-                    }
-
-                    new_content = filtered_lines.join("\n");
-
-                    // Add modern gesture syntax at the end
-                    if !new_content.contains("gesture = 3, horizontal, workspace") {
-                        new_content.push_str("\n\n# Gestures (Hyprland v0.51+)\ngesture = 3, horizontal, workspace\n");
-                    }
-
-                    fs::write(&path, new_content)?;
-                    log::log(&format!("Patched gesture syntax in {:?}", path));
-                }
-            }
-        }
-    }
-
-    ui::success("Patched gesture syntax for Hyprland compatibility");
+    // Upstream caelestia dotfiles already use the modern gesture syntax:
+    // gesture = $workspaceSwipeFingers, horizontal, workspace
+    // No patching needed - the old deprecated `gestures { workspace_swipe }` block
+    // is no longer present in upstream.
+    
+    ui::success("Gesture syntax already compatible with Hyprland v0.51+");
     Ok(())
 }
 

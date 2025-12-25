@@ -162,7 +162,7 @@ pub fn init_scheme(dry_run: bool) -> Result<()> {
         std::fs::write(&hypr_vars, "# User Hyprland variables\n")?;
     }
     if !hypr_user.exists() {
-        std::fs::write(&hypr_user, "# User Hyprland config\n\n# Gestures (Hyprland v0.51+)\ngesture = 3, horizontal, workspace\n")?;
+        std::fs::write(&hypr_user, "# User Hyprland config\n# Add your custom Hyprland settings here\n")?;
     }
 
     ui::success("Created caelestia config directory");
