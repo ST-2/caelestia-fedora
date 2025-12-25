@@ -21,7 +21,7 @@ const PACKAGES: &[&str] = &[
     "qt6-qtdeclarative-devel",
     "qt6-qtwayland-devel",
     "qt6-qtsvg-devel",
-    "qt6-qtshadertools",
+    "qt6-qtshadertools-devel",
     "spirv-tools",
     "cli11-devel",
     "jemalloc-devel",
