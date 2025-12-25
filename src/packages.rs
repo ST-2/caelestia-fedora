@@ -6,17 +6,15 @@ use crate::{log, ui};
 const PACKAGES: &[&str] = &[
     // Hyprland and Wayland
     "hyprland",
-    "hyprland-protocols",
     "xdg-desktop-portal-hyprland",
     "xdg-desktop-portal-gtk",
     // Terminal
     "foot",
     // Shell and tools
     "fish",
-    "starship",
     // Greetd
     "greetd",
-    "greetd-tuigreet",
+    "tuigreet",
     // Quickshell and Qt6
     "quickshell",
     "qt6-qtbase-devel",
@@ -45,7 +43,7 @@ const PACKAGES: &[&str] = &[
     "playerctl",
     "pamixer",
     "NetworkManager",
-    "polkit-gnome",
+    "lxpolkit",
 ];
 
 pub fn install_all(dry_run: bool) -> Result<()> {
