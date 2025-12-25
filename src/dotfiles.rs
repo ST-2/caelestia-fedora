@@ -6,8 +6,8 @@ use std::process::Command;
 
 use crate::{log, ui};
 
-const DOTFILES_REPO: &str = "https://github.com/caelestia/dotfiles.git";
-const SHELL_REPO: &str = "https://github.com/caelestia/caelestia-shell.git";
+const DOTFILES_REPO: &str = "https://github.com/caelestia-dots/caelestia.git";
+const SHELL_REPO: &str = "https://github.com/caelestia-dots/shell.git";
 
 pub fn clone_repos(dry_run: bool) -> Result<()> {
     let local_share = dirs::data_local_dir().unwrap_or_else(|| PathBuf::from("~/.local/share"));
@@ -143,6 +143,7 @@ pub fn symlink_configs(dry_run: bool) -> Result<()> {
         ("foot", "foot"),
         ("fastfetch", "fastfetch"),
         ("btop", "btop"),
+        ("uwsm", "uwsm"),
     ];
 
     for (src, dst) in links {
