@@ -48,7 +48,7 @@ fn run(cli: Cli) -> Result<()> {
         }
     }
 
-    let mut progress = ui::Progress::new(12);
+    let mut progress = ui::Progress::new(13);
 
     // Step 1: Pre-flight checks
     progress.step("Running pre-flight checks...");
@@ -68,6 +68,10 @@ fn run(cli: Cli) -> Result<()> {
     // Step 4: Build Quickshell from source
     progress.step("Building Quickshell...");
     packages::install_quickshell(cli.dry_run)?;
+
+    // Step 4b: Installing Cava (Wait, let's just make it sequential)
+    progress.step("Installing Cava...");
+    packages::install_cava(cli.dry_run)?;
 
     // Step 5: Clone repositories
     progress.step("Cloning dotfiles repositories...");

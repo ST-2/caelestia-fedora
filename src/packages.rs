@@ -35,6 +35,15 @@ const PACKAGES: &[&str] = &[
     "polkit-devel",
     "pam-devel",
     "pkgconf-pkg-config",
+    "libqalculate-devel",
+    "aubio-devel",
+    // Cava build deps
+    "alsa-lib-devel",
+    "fftw-devel",
+    "pulseaudio-libs-devel",
+    "autoconf-archive",
+    "iniparser-devel",
+    "libtool",
     // Build tools
     "cmake",
     "ninja-build",
@@ -235,6 +244,127 @@ pub fn install_quickshell(dry_run: bool) -> Result<()> {
 
     ui::success("Quickshell installed");
     log::log("Quickshell installation complete");
+
+    Ok(())
+}
+
+pub fn install_cava(dry_run: bool) -> Result<()> {
+    ui::info("Installing Cava from source...");
+
+    if dry_run {
+        ui::success("Would build Cava from source (dry-run)");
+        return Ok(());
+    }
+
+    // Check if already installed via pkg-config check
+    // If /usr/lib64/pkgconfig/cava.pc exists, we assume it's done.
+    if std::path::Path::new("/usr/lib64/pkgconfig/cava.pc").exists() {
+        ui::success("Cava already installed (checked pkg-config)");
+        return Ok(());
+    }
+
+    let build_dir = std::path::PathBuf::from("/tmp/cava-build");
+
+    // Clone repo
+    if build_dir.exists() {
+        std::fs::remove_dir_all(&build_dir).ok();
+    }
+
+    let cmd = "git clone --depth 1 https://github.com/karlstav/cava /tmp/cava-build";
+    log::log_command(cmd);
+
+    let output = Command::new("git")
+        .args(["clone", "--depth", "1", "https://github.com/karlstav/cava", "/tmp/cava-build"])
+        .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::log_error(&stderr);
+        bail!("Failed to clone Cava");
+    }
+
+    ui::success("Cloned Cava");
+
+    // Configure with CMake (builds cavacore static lib)
+    ui::info("Configuring Cava...");
+    // CAVACORE.md says to use root CMakeLists
+    let cmd = "cmake -B build -S /tmp/cava-build -G Ninja -DCMAKE_BUILD_TYPE=Release";
+    log::log_command(cmd);
+
+    let output = Command::new("cmake")
+        .args([
+            "-B", "/tmp/cava-build/build",
+            "-S", "/tmp/cava-build",
+            "-G", "Ninja",
+            "-DCMAKE_BUILD_TYPE=Release",
+        ])
+        .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::log_error(&stderr);
+        bail!("Failed to configure Cava");
+    }
+
+    // Build
+    ui::info("Building Cava...");
+    let cmd = "cmake --build /tmp/cava-build/build";
+    log::log_command(cmd);
+
+    let output = Command::new("cmake")
+        .args(["--build", "/tmp/cava-build/build"])
+        .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::log_error(&stderr);
+        bail!("Failed to build Cava");
+    }
+
+    ui::success("Built Cava");
+
+    // Manual Install
+    ui::info("Installing Cava library and headers...");
+
+    // Install header
+    let cmd = "sudo cp /tmp/cava-build/cavacore.h /usr/include/";
+    log::log_command(cmd);
+    Command::new("sudo")
+        .args(["cp", "/tmp/cava-build/cavacore.h", "/usr/include/"])
+        .status()?;
+
+    // Install library
+    let cmd = "sudo cp /tmp/cava-build/build/libcavacore.a /usr/lib64/";
+    log::log_command(cmd);
+    Command::new("sudo")
+        .args(["cp", "/tmp/cava-build/build/libcavacore.a", "/usr/lib64/"])
+        .status()?;
+
+    // Create pkg-config file
+    ui::info("Creating cava.pc...");
+    let pc_content = r#"prefix=/usr
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib64
+includedir=${prefix}/include
+
+Name: cava
+Description: Cava Core Library
+Version: 0.10.3
+Libs: -L${libdir} -lcavacore
+Cflags: -I${includedir}
+"#;
+
+    let pc_path = "/tmp/cava-build/cava.pc";
+    std::fs::write(pc_path, pc_content)?;
+
+    let cmd = "sudo cp /tmp/cava-build/cava.pc /usr/lib64/pkgconfig/";
+    log::log_command(cmd);
+    Command::new("sudo")
+        .args(["cp", pc_path, "/usr/lib64/pkgconfig/"])
+        .status()?;
+
+    ui::success("Cava installed");
+    log::log("Cava installation complete");
 
     Ok(())
 }
