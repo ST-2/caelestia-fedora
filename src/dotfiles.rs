@@ -94,7 +94,7 @@ pub fn build_shell(dry_run: bool) -> Result<()> {
     // CMake configure
     ui::info("Configuring caelestia-shell...");
     let cmake_cmd = format!(
-        "cmake -B {:?} -S {:?} -G Ninja -DCMAKE_BUILD_TYPE=Release -DINSTALL_QMLDIR=/usr/lib64/qt6/qml -DINSTALL_LIBDIR=/usr/lib64/caelestia",
+        "cmake -B {:?} -S {:?} -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DINSTALL_QMLDIR=/usr/lib64/qt6/qml -DINSTALL_LIBDIR=/usr/lib64/caelestia",
         build_dir, shell_dir
     );
     log::log_command(&cmake_cmd);
@@ -108,6 +108,7 @@ pub fn build_shell(dry_run: bool) -> Result<()> {
             "-G",
             "Ninja",
             "-DCMAKE_BUILD_TYPE=Release",
+            "-DCMAKE_INSTALL_PREFIX=/usr",
             "-DINSTALL_QMLDIR=/usr/lib64/qt6/qml",
             "-DINSTALL_LIBDIR=/usr/lib64/caelestia",
         ])
