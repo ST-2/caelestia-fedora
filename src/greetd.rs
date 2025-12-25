@@ -8,12 +8,77 @@ vt = 1
 
 [default_session]
 command = "tuigreet --time --remember --remember-session --sessions /usr/share/wayland-sessions"
-user = "root"
+user = "greeter"
 "#;
 
 pub fn setup_all(dry_run: bool) -> Result<()> {
+    create_greeter_user(dry_run)?;
+    create_cache_dir(dry_run)?;
     write_config(dry_run)?;
     configure_services(dry_run)?;
+    Ok(())
+}
+
+fn create_greeter_user(dry_run: bool) -> Result<()> {
+    ui::info("Creating greeter user...");
+
+    if dry_run {
+        ui::success("Would create greeter user (dry-run)");
+        return Ok(());
+    }
+
+    // Check if user already exists
+    let check = Command::new("id").arg("greeter").output();
+    if let Ok(output) = check {
+        if output.status.success() {
+            ui::success("Greeter user already exists");
+            return Ok(());
+        }
+    }
+
+    let cmd = "sudo useradd -r -s /usr/sbin/nologin greeter";
+    log::log_command(cmd);
+
+    let output = Command::new("sudo")
+        .args(["useradd", "-r", "-s", "/usr/sbin/nologin", "greeter"])
+        .output()?;
+
+    if output.status.success() {
+        ui::success("Created greeter user");
+        log::log("Greeter user created");
+    } else {
+        ui::warning("Could not create greeter user (may already exist)");
+    }
+
+    Ok(())
+}
+
+fn create_cache_dir(dry_run: bool) -> Result<()> {
+    ui::info("Creating tuigreet cache directory...");
+
+    if dry_run {
+        ui::success("Would create cache directory (dry-run)");
+        return Ok(());
+    }
+
+    // Create directory
+    let _ = Command::new("sudo")
+        .args(["mkdir", "-p", "/var/cache/tuigreet"])
+        .output();
+
+    // Set ownership
+    let _ = Command::new("sudo")
+        .args(["chown", "greeter:greeter", "/var/cache/tuigreet"])
+        .output();
+
+    // Set permissions
+    let _ = Command::new("sudo")
+        .args(["chmod", "0755", "/var/cache/tuigreet"])
+        .output();
+
+    ui::success("Created tuigreet cache directory");
+    log::log("Cache directory created at /var/cache/tuigreet");
+
     Ok(())
 }
 
