@@ -29,6 +29,7 @@ const PACKAGES: &[&str] = &[
     "wayland-devel",
     "wayland-protocols-devel",
     "libdrm-devel",
+    "mesa-libgbm-devel",
     "pipewire-devel",
     // Build tools
     "cmake",
