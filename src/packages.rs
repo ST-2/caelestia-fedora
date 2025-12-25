@@ -273,3 +273,73 @@ pub fn install_rust(dry_run: bool) -> Result<()> {
         bail!("Failed to install Rust");
     }
 }
+
+pub fn install_nerd_font(dry_run: bool) -> Result<()> {
+    ui::info("Installing JetBrains Mono Nerd Font...");
+
+    if dry_run {
+        ui::success("Would install JetBrains Mono Nerd Font (dry-run)");
+        return Ok(());
+    }
+
+    let font_dir = dirs::home_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("~"))
+        .join(".local/share/fonts");
+
+    // Check if already installed
+    let font_check = font_dir.join("JetBrainsMonoNerdFont-Regular.ttf");
+    if font_check.exists() {
+        ui::success("JetBrains Mono Nerd Font already installed");
+        return Ok(());
+    }
+
+    std::fs::create_dir_all(&font_dir)?;
+
+    let tmp_dir = std::path::PathBuf::from("/tmp/nerd-fonts");
+    if tmp_dir.exists() {
+        std::fs::remove_dir_all(&tmp_dir).ok();
+    }
+    std::fs::create_dir_all(&tmp_dir)?;
+
+    // Download font
+    ui::info("Downloading JetBrains Mono Nerd Font...");
+    let url = "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz";
+    let cmd = format!("curl -sL {} -o /tmp/nerd-fonts/JetBrainsMono.tar.xz", url);
+    log::log_command(&cmd);
+
+    let output = Command::new("curl")
+        .args(["-sL", url, "-o", "/tmp/nerd-fonts/JetBrainsMono.tar.xz"])
+        .output()?;
+
+    if !output.status.success() {
+        bail!("Failed to download JetBrains Mono Nerd Font");
+    }
+
+    // Extract
+    ui::info("Extracting font...");
+    let output = Command::new("tar")
+        .args(["-xf", "/tmp/nerd-fonts/JetBrainsMono.tar.xz", "-C", "/tmp/nerd-fonts"])
+        .output()?;
+
+    if !output.status.success() {
+        bail!("Failed to extract font archive");
+    }
+
+    // Copy ttf files
+    for entry in std::fs::read_dir(&tmp_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.extension().map(|e| e == "ttf").unwrap_or(false) {
+            let dest = font_dir.join(path.file_name().unwrap());
+            std::fs::copy(&path, &dest)?;
+        }
+    }
+
+    // Update font cache
+    let _ = Command::new("fc-cache").args(["-fv"]).output();
+
+    ui::success("JetBrains Mono Nerd Font installed");
+    log::log("Nerd font installation complete");
+
+    Ok(())
+}

@@ -63,6 +63,7 @@ fn run(cli: Cli) -> Result<()> {
     packages::install_all(cli.dry_run)?;
     packages::install_starship(cli.dry_run)?;
     packages::install_rust(cli.dry_run)?;
+    packages::install_nerd_font(cli.dry_run)?;
 
     // Step 4: Build Quickshell from source
     progress.step("Building Quickshell...");
