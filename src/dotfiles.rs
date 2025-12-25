@@ -85,6 +85,10 @@ pub fn build_shell(dry_run: bool) -> Result<()> {
     }
 
     let build_dir = shell_dir.join("build");
+    if build_dir.exists() {
+        ui::info("Cleaning previous build...");
+        fs::remove_dir_all(&build_dir)?;
+    }
     fs::create_dir_all(&build_dir)?;
 
     // CMake configure
