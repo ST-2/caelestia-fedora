@@ -88,8 +88,9 @@ pub fn build_shell(dry_run: bool) -> Result<()> {
     fs::create_dir_all(&build_dir)?;
 
     // CMake configure
+    ui::info("Configuring caelestia-shell...");
     let cmake_cmd = format!(
-        "cmake -B {:?} -S {:?} -G Ninja",
+        "cmake -B {:?} -S {:?} -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/",
         build_dir, shell_dir
     );
     log::log_command(&cmake_cmd);
@@ -102,31 +103,52 @@ pub fn build_shell(dry_run: bool) -> Result<()> {
             shell_dir.to_str().unwrap(),
             "-G",
             "Ninja",
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DCMAKE_INSTALL_PREFIX=/",
         ])
         .output()?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         log::log_error(&stderr);
-        ui::warning("CMake configure failed (this may be expected if shell has no build system)");
+        ui::warning("CMake configure failed");
         return Ok(());
     }
 
     // Ninja build
-    let ninja_cmd = format!("ninja -C {:?}", build_dir);
+    ui::info("Compiling caelestia-shell...");
+    let ninja_cmd = format!("cmake --build {:?}", build_dir);
     log::log_command(&ninja_cmd);
 
-    let output = Command::new("ninja")
-        .args(["-C", build_dir.to_str().unwrap()])
+    let output = Command::new("cmake")
+        .args(["--build", build_dir.to_str().unwrap()])
         .output()?;
 
-    if output.status.success() {
-        ui::success("Built caelestia-shell");
-        log::log("Shell build complete");
-    } else {
+    if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         log::log_error(&stderr);
         ui::warning("Shell build failed (continuing anyway)");
+        return Ok(());
+    }
+
+    ui::success("Built caelestia-shell");
+
+    // Install (requires sudo)
+    ui::info("Installing caelestia-shell...");
+    let install_cmd = format!("sudo cmake --install {:?}", build_dir);
+    log::log_command(&install_cmd);
+
+    let output = Command::new("sudo")
+        .args(["cmake", "--install", build_dir.to_str().unwrap()])
+        .output()?;
+
+    if output.status.success() {
+        ui::success("Installed caelestia-shell");
+        log::log("Shell installation complete");
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::log_error(&stderr);
+        ui::warning("Shell installation failed");
     }
 
     Ok(())
