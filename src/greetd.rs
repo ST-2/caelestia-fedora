@@ -7,8 +7,8 @@ const GREETD_CONFIG: &str = r#"[terminal]
 vt = 1
 
 [default_session]
-command = "tuigreet --time --remember --cmd Hyprland"
-user = "greeter"
+command = "tuigreet --time --remember --remember-session --sessions /usr/share/wayland-sessions"
+user = "root"
 "#;
 
 pub fn setup_all(dry_run: bool) -> Result<()> {
