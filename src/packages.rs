@@ -21,6 +21,7 @@ const PACKAGES: &[&str] = &[
     // Qt6 (for building quickshell)
     "qt6-qtbase-devel",
     "qt6-qtdeclarative-devel",
+    "qt6-qtdeclarative-static",
     "qt6-qtwayland-devel",
     "qt6-qtsvg-devel",
     "qt6-qtshadertools-devel",
