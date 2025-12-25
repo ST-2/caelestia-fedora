@@ -72,17 +72,17 @@ fn run(cli: Cli) -> Result<()> {
     progress.step("Installing caelestia-cli...");
     cli::install_cli(cli.dry_run)?;
 
-    // Step 6: Initialize color scheme
+    // Step 6: Symlink configs (before scheme init so paths exist)
+    progress.step("Symlinking configurations...");
+    dotfiles::symlink_configs(cli.dry_run)?;
+
+    // Step 7: Initialize color scheme (after symlinks so ~/.config/hypr exists)
     progress.step("Initializing color scheme...");
     cli::init_scheme(cli.dry_run)?;
 
-    // Step 7: Build shell widgets
+    // Step 8: Build shell widgets
     progress.step("Building caelestia-shell...");
     dotfiles::build_shell(cli.dry_run)?;
-
-    // Step 8: Symlink configs
-    progress.step("Symlinking configurations...");
-    dotfiles::symlink_configs(cli.dry_run)?;
 
     // Step 9: Set up shell (fish)
     progress.step("Setting up Fish shell...");

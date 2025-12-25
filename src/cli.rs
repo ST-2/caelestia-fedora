@@ -127,18 +127,13 @@ pub fn init_scheme(dry_run: bool) -> Result<()> {
     }
 
     let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("~"));
-    let dotfiles_dir = dirs::data_local_dir()
-        .unwrap_or_else(|| PathBuf::from("~/.local/share"))
-        .join("caelestia");
 
-    let scheme_src = dotfiles_dir.join("hypr/scheme/default.conf");
-    let scheme_dir = home.join(".config/hypr/scheme");
-    let scheme_dst = scheme_dir.join("current.conf");
+    // The scheme directory should already exist via symlink to dotfiles
+    // ~/.config/hypr -> ~/.local/share/caelestia/hypr
+    let scheme_src = home.join(".config/hypr/scheme/default.conf");
+    let scheme_dst = home.join(".config/hypr/scheme/current.conf");
 
-    // Create scheme directory
-    std::fs::create_dir_all(&scheme_dir)?;
-
-    // Copy default scheme if source exists
+    // Copy default scheme to current if source exists
     if scheme_src.exists() {
         std::fs::copy(&scheme_src, &scheme_dst)?;
         ui::success("Initialized default color scheme");
