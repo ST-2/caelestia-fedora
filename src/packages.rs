@@ -608,6 +608,36 @@ pub fn install_fonts(dry_run: bool) -> Result<()> {
     } else {
         ui::success("Caskaydia Cove Nerd Font already installed");
     }
+
+    // 3. JetBrains Mono Nerd Font (required by foot.ini upstream)
+    let jb_target = font_dir.join("JetBrainsMonoNerdFont-Regular.ttf");
+    if !jb_target.exists() {
+        ui::info("Downloading JetBrains Mono Nerd Font...");
+        let url = "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.3.0/JetBrainsMono.zip";
+        let zip_path = "/tmp/JetBrainsMono.zip";
+        
+        // Download
+        let output = Command::new("curl")
+            .args(["-L", "-o", zip_path, url])
+            .output()?;
+        
+        if output.status.success() {
+            ui::info("Extracting JetBrains Mono...");
+            // Unzip content
+            let output = Command::new("unzip")
+                .args(["-o", zip_path, "-d", font_dir.to_str().unwrap(), "JetBrainsMonoNerdFont*.ttf"])
+                .output()?;
+            
+            if !output.status.success() {
+                 ui::warning("Failed to extract JetBrains Mono");
+            }
+            std::fs::remove_file(zip_path).ok();
+        } else {
+            ui::warning("Failed to download JetBrains Mono");
+        }
+    } else {
+        ui::success("JetBrains Mono Nerd Font already installed");
+    }
     
     // Update font cache
     let _ = Command::new("fc-cache").args(["-fv"]).output();
