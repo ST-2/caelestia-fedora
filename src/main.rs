@@ -63,7 +63,7 @@ fn run(cli: Cli) -> Result<()> {
     packages::install_all(cli.dry_run)?;
     packages::install_starship(cli.dry_run)?;
     packages::install_rust(cli.dry_run)?;
-    packages::install_nerd_font(cli.dry_run)?;
+    packages::install_rust(cli.dry_run)?;
 
     // Step 4: Build Quickshell from source
     progress.step("Building Quickshell...");
@@ -73,8 +73,9 @@ fn run(cli: Cli) -> Result<()> {
     progress.step("Installing Cava...");
     packages::install_cava(cli.dry_run)?;
 
-    // Step 5: Clone repositories
-    progress.step("Cloning dotfiles repositories...");
+    // Step 5: Install Fonts
+    progress.step("Installing Fonts...");
+    packages::install_fonts(cli.dry_run)?;
     dotfiles::clone_repos(cli.dry_run)?;
 
     // Step 6: Install caelestia-cli

@@ -51,6 +51,7 @@ const PACKAGES: &[&str] = &[
     "git",
     "curl",
     "tar",
+    "unzip",
     // Python build tools for caelestia-cli
     "python3-devel",
     "python3-build",
@@ -64,8 +65,9 @@ const PACKAGES: &[&str] = &[
     "adw-gtk3-theme",
     "papirus-icon-theme",
     // Fonts
-    "google-noto-fonts-common",
+    "google-noto-common-fonts",
     "google-noto-sans-fonts",
+    "google-rubik-fonts",
     "fontawesome-fonts",
     // Utilities
     "fastfetch",
@@ -288,7 +290,7 @@ pub fn install_cava(dry_run: bool) -> Result<()> {
     // Configure with CMake (builds cavacore static lib)
     ui::info("Configuring Cava...");
     // CAVACORE.md says to use root CMakeLists
-    let cmd = "cmake -B build -S /tmp/cava-build -G Ninja -DCMAKE_BUILD_TYPE=Release";
+    let cmd = "cmake -B build -S /tmp/cava-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON";
     log::log_command(cmd);
 
     let output = Command::new("cmake")
@@ -297,6 +299,7 @@ pub fn install_cava(dry_run: bool) -> Result<()> {
             "-S", "/tmp/cava-build",
             "-G", "Ninja",
             "-DCMAKE_BUILD_TYPE=Release",
+            "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
         ])
         .output()?;
 
@@ -350,7 +353,7 @@ includedir=${prefix}/include
 Name: cava
 Description: Cava Core Library
 Version: 0.10.3
-Libs: -L${libdir} -lcavacore
+Libs: -L${libdir} -lcavacore -lfftw3 -lm -liniparser
 Cflags: -I${includedir}
 "#;
 
@@ -404,11 +407,11 @@ pub fn install_rust(dry_run: bool) -> Result<()> {
     }
 }
 
-pub fn install_nerd_font(dry_run: bool) -> Result<()> {
-    ui::info("Installing JetBrains Mono Nerd Font...");
+pub fn install_fonts(dry_run: bool) -> Result<()> {
+    ui::info("Installing Fonts...");
 
     if dry_run {
-        ui::success("Would install JetBrains Mono Nerd Font (dry-run)");
+        ui::success("Would install Fonts (dry-run)");
         return Ok(());
     }
 
@@ -416,60 +419,63 @@ pub fn install_nerd_font(dry_run: bool) -> Result<()> {
         .unwrap_or_else(|| std::path::PathBuf::from("~"))
         .join(".local/share/fonts");
 
-    // Check if already installed
-    let font_check = font_dir.join("JetBrainsMonoNerdFont-Regular.ttf");
-    if font_check.exists() {
-        ui::success("JetBrains Mono Nerd Font already installed");
-        return Ok(());
-    }
-
     std::fs::create_dir_all(&font_dir)?;
 
-    let tmp_dir = std::path::PathBuf::from("/tmp/nerd-fonts");
-    if tmp_dir.exists() {
-        std::fs::remove_dir_all(&tmp_dir).ok();
-    }
-    std::fs::create_dir_all(&tmp_dir)?;
+    // 1. Material Symbols Rounded
+    let mat_target = font_dir.join("MaterialSymbolsRounded.ttf");
+    if !mat_target.exists() {
+        ui::info("Downloading Material Symbols Rounded...");
+        let url = "https://github.com/google/material-design-icons/raw/master/variablefont/MaterialSymbolsRounded%5BFILL,GRAD,opsz,wght%5D.ttf";
+        let cmd = format!("curl -L -o {:?} {}", mat_target, url);
+        log::log_command(&cmd);
 
-    // Download font
-    ui::info("Downloading JetBrains Mono Nerd Font...");
-    let url = "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.tar.xz";
-    let cmd = format!("curl -sL {} -o /tmp/nerd-fonts/JetBrainsMono.tar.xz", url);
-    log::log_command(&cmd);
+        let output = Command::new("curl")
+            .args(["-L", "-o", mat_target.to_str().unwrap(), url])
+            .output()?;
 
-    let output = Command::new("curl")
-        .args(["-sL", url, "-o", "/tmp/nerd-fonts/JetBrainsMono.tar.xz"])
-        .output()?;
-
-    if !output.status.success() {
-        bail!("Failed to download JetBrains Mono Nerd Font");
-    }
-
-    // Extract
-    ui::info("Extracting font...");
-    let output = Command::new("tar")
-        .args(["-xf", "/tmp/nerd-fonts/JetBrainsMono.tar.xz", "-C", "/tmp/nerd-fonts"])
-        .output()?;
-
-    if !output.status.success() {
-        bail!("Failed to extract font archive");
-    }
-
-    // Copy ttf files
-    for entry in std::fs::read_dir(&tmp_dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.extension().map(|e| e == "ttf").unwrap_or(false) {
-            let dest = font_dir.join(path.file_name().unwrap());
-            std::fs::copy(&path, &dest)?;
+        if !output.status.success() {
+            ui::warning("Failed to download Material Symbols Rounded");
         }
+    } else {
+        ui::success("Material Symbols Rounded already installed");
     }
 
+    // 2. Caskaydia Cove Nerd Font (via CaskaydiaCode.zip)
+    // Check if one of the files exists as a proxy
+    let cas_target = font_dir.join("CaskaydiaCoveNerdFont-Regular.ttf");
+    if !cas_target.exists() {
+        ui::info("Downloading Caskaydia Cove Nerd Font...");
+        let url = "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.3.0/CascadiaCode.zip";
+        let zip_path = "/tmp/CaskaydiaCove.zip";
+        
+        // Download
+        let output = Command::new("curl")
+            .args(["-L", "-o", zip_path, url])
+            .output()?;
+        
+        if output.status.success() {
+            ui::info("Extracting Caskaydia Cove...");
+            // Unzip content
+            let output = Command::new("unzip")
+                .args(["-o", zip_path, "-d", font_dir.to_str().unwrap(), "CaskaydiaCoveNerdFont*.ttf"])
+                .output()?;
+            
+            if !output.status.success() {
+                 ui::warning("Failed to extract Caskaydia Cove");
+            }
+            std::fs::remove_file(zip_path).ok();
+        } else {
+            ui::warning("Failed to download Caskaydia Cove");
+        }
+    } else {
+        ui::success("Caskaydia Cove Nerd Font already installed");
+    }
+    
     // Update font cache
     let _ = Command::new("fc-cache").args(["-fv"]).output();
 
-    ui::success("JetBrains Mono Nerd Font installed");
-    log::log("Nerd font installation complete");
+    ui::success("Fonts installed");
+    log::log("Font installation complete");
 
     Ok(())
 }
