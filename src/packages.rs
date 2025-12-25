@@ -27,6 +27,7 @@ const PACKAGES: &[&str] = &[
     "curl",
     "tar",
     // Python build tools for caelestia-cli
+    "python3-devel",
     "python3-build",
     "python3-hatchling",
     "python3-pip",
