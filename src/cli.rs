@@ -42,46 +42,32 @@ pub fn install_cli(dry_run: bool) -> Result<()> {
 
     ui::success("Cloned caelestia-cli");
 
-    // Build wheel
-    ui::info("Building caelestia-cli...");
-    let cmd = "python3 -m build --wheel";
+    // Install hatch-vcs (required by pyproject.toml)
+    ui::info("Installing build dependencies...");
+    let cmd = "pip3 install --break-system-packages hatch-vcs";
     log::log_command(cmd);
 
-    let output = Command::new("python3")
-        .args(["-m", "build", "--wheel"])
-        .current_dir(&cli_dir)
+    let output = Command::new("pip3")
+        .args(["install", "--break-system-packages", "hatch-vcs"])
+        .output()?;
+
+    if !output.status.success() {
+        ui::warning("Could not install hatch-vcs, continuing anyway");
+    }
+
+    // Install directly with pip (simpler than building wheel)
+    ui::info("Installing caelestia-cli...");
+    let cmd = "pip3 install --break-system-packages /tmp/caelestia-cli";
+    log::log_command(cmd);
+
+    let output = Command::new("pip3")
+        .args(["install", "--break-system-packages", "/tmp/caelestia-cli"])
         .output()?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         log::log_error(&stderr);
-        ui::warning("Failed to build caelestia-cli wheel, trying pip install from source");
-
-        // Fallback: pip install from source
-        let output = Command::new("pip3")
-            .args(["install", "--break-system-packages", "."])
-            .current_dir(&cli_dir)
-            .output()?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            log::log_error(&stderr);
-            bail!("Failed to install caelestia-cli");
-        }
-    } else {
-        // Install wheel
-        ui::info("Installing caelestia-cli...");
-
-        let output = Command::new("sh")
-            .args(["-c", "pip3 install --break-system-packages dist/*.whl"])
-            .current_dir(&cli_dir)
-            .output()?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            log::log_error(&stderr);
-            bail!("Failed to install caelestia-cli wheel");
-        }
+        bail!("Failed to install caelestia-cli");
     }
 
     ui::success("Installed caelestia-cli");
