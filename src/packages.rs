@@ -31,6 +31,10 @@ const PACKAGES: &[&str] = &[
     "libdrm-devel",
     "mesa-libgbm-devel",
     "pipewire-devel",
+    // Quickshell optional deps
+    "polkit-devel",
+    "pam-devel",
+    "pkgconf-pkg-config",
     // Build tools
     "cmake",
     "ninja-build",
