@@ -65,7 +65,7 @@ const PACKAGES: &[&str] = &[
     "adw-gtk3-theme",
     "papirus-icon-theme",
     // Fonts
-    "google-noto-common-fonts",
+    "google-noto-fonts-common",
     "google-noto-sans-fonts",
     "google-rubik-fonts",
     "fontawesome-fonts",
