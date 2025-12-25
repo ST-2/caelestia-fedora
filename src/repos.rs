@@ -4,7 +4,7 @@ use std::process::Command;
 use crate::{log, ui};
 
 const COPR_REPOS: &[&str] = &[
-    "solopasha/hyprland",
+    // "solopasha/hyprland",
 ];
 
 pub fn add_all(dry_run: bool) -> Result<()> {

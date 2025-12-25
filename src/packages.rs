@@ -6,7 +6,7 @@ use crate::{log, ui};
 const PACKAGES: &[&str] = &[
     // Hyprland and Wayland
     "hyprland",
-    "hyprland-qtutils",
+    // "hyprland-qtutils",
     "xdg-desktop-portal-hyprland",
     "xdg-desktop-portal-gtk",
     // Terminal
