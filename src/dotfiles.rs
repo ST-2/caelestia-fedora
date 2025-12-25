@@ -151,6 +151,15 @@ pub fn build_shell(dry_run: bool) -> Result<()> {
     if output.status.success() {
         ui::success("Installed caelestia-shell");
         log::log("Shell installation complete");
+
+        // Verification
+        ui::info("Verifying installation...");
+        let _ = Command::new("ls")
+            .args(["-R", "/usr/lib64/qt6/qml/Caelestia"])
+            .status();
+        let _ = Command::new("ls")
+            .args(["-R", "/usr/lib/qt6/qml/Caelestia"])
+            .status();
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
         log::log_error(&stderr);
