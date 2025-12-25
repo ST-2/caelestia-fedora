@@ -119,7 +119,7 @@ pub fn build_shell(dry_run: bool) -> Result<()> {
         log::log_error(&stderr);
         ui::error("CMake configure failed:");
         println!("{}", stderr); // Print directly to see it
-        return Ok(());
+        bail!("CMake configure failed: {}", stderr);
     }
 
     // Ninja build
@@ -136,7 +136,7 @@ pub fn build_shell(dry_run: bool) -> Result<()> {
         log::log_error(&stderr);
         ui::error("Shell build failed:");
         println!("{}", stderr);
-        return Ok(());
+        bail!("Shell build failed: {}", stderr);
     }
 
     ui::success("Built caelestia-shell");

@@ -99,26 +99,24 @@ pub fn install_all(dry_run: bool) -> Result<()> {
         for pkg in PACKAGES {
             println!("  - {}", pkg);
         }
-        ui::success("Package installation (dry-run: skipped)");
         return Ok(());
     }
 
-    let mut args = vec!["dnf", "install", "-y"];
-    args.extend(PACKAGES.iter().copied());
-
-    let output = Command::new("sudo").args(&args).output()?;
-
-    log::log_output(&String::from_utf8_lossy(&output.stdout));
+    let output = Command::new("sudo")
+        .args(["dnf", "install", "-y"])
+        .args(PACKAGES)
+        .output()?;
 
     if output.status.success() {
-        ui::success("All packages installed");
-        log::log("Package installation complete");
-        Ok(())
+        ui::success("Packages installed successfully");
+        log::log("Package installation completed");
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        log::log_error(&stderr);
-        bail!("Failed to install packages");
+        log::log_error(&format!("Package installation failed: {}", stderr));
+        bail!("Failed to install packages: {}", stderr);
     }
+
+    Ok(())
 }
 
 pub fn install_starship(dry_run: bool) -> Result<()> {
@@ -139,57 +137,137 @@ pub fn install_starship(dry_run: bool) -> Result<()> {
     log::log_command(cmd);
 
     let output = Command::new("sh")
-        .args(["-c", "curl -sS https://starship.rs/install.sh | sh -s -- -y"])
+        .arg("-c")
+        .arg(cmd)
         .output()?;
 
-    log::log_output(&String::from_utf8_lossy(&output.stdout));
-
     if output.status.success() {
-        ui::success("Starship installed");
-        log::log("Starship installation complete");
-        Ok(())
+        ui::success("Starship installed successfully");
+        log::log("Starship installation completed");
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        log::log_error(&stderr);
-        bail!("Failed to install Starship");
+        log::log_error(&format!("Starship installation failed: {}", stderr));
+        bail!("Failed to install Starship: {}", stderr);
     }
+
+    Ok(())
 }
 
-pub fn install_quickshell(dry_run: bool) -> Result<()> {
-    ui::info("Installing Quickshell from source...");
+pub fn install_rust(dry_run: bool) -> Result<()> {
+    ui::info("Installing Rust...");
 
     if dry_run {
-        ui::success("Would build Quickshell from source (dry-run)");
+        ui::success("Would install Rust (dry-run)");
         return Ok(());
     }
 
     // Check if already installed
-    if which::which("quickshell").is_ok() {
-        ui::success("Quickshell already installed");
+    if which::which("cargo").is_ok() {
+        ui::success("Rust already installed");
         return Ok(());
     }
 
-    // Verify critical Qt packages are installed
-    verify_qt_packages()?;
+    let cmd = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y";
+    log::log_command(cmd);
 
-    let build_dir = std::path::PathBuf::from("/tmp/quickshell");
+    let output = Command::new("sh")
+        .arg("-c")
+        .arg(cmd)
+        .output()?;
 
-    // Clone repo
-    if build_dir.exists() {
-        std::fs::remove_dir_all(&build_dir).ok();
+    if output.status.success() {
+        ui::success("Rust installed successfully");
+        log::log("Rust installation completed");
+        ui::info("Note: You may need to restart your shell or run 'source ~/.cargo/env'");
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::log_error(&format!("Rust installation failed: {}", stderr));
+        bail!("Failed to install Rust: {}", stderr);
     }
 
-    let cmd = "git clone --depth 1 https://github.com/outfoxxed/quickshell /tmp/quickshell";
+    Ok(())
+}
+
+pub fn install_hyprland_qt_support(dry_run: bool) -> Result<()> {
+    ui::info("Installing hyprland-qt-support...");
+
+    if dry_run {
+        ui::success("Would install hyprland-qt-support (dry-run)");
+        return Ok(());
+    }
+
+    let cmd = "sudo dnf install -y hyprland-qt-support";
+    log::log_command(cmd);
+
+    let output = Command::new("sudo")
+        .args(["dnf", "install", "-y", "hyprland-qt-support"])
+        .output()?;
+
+    if output.status.success() {
+        ui::success("hyprland-qt-support installed successfully");
+        log::log("hyprland-qt-support installation completed");
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::log_error(&format!("hyprland-qt-support installation failed: {}", stderr));
+        ui::warning("Failed to install hyprland-qt-support (may not be available in your repos)");
+    }
+
+    Ok(())
+}
+
+pub fn install_hyprland_qtutils(dry_run: bool) -> Result<()> {
+    ui::info("Installing hyprland-qtutils...");
+
+    if dry_run {
+        ui::success("Would install hyprland-qtutils (dry-run)");
+        return Ok(());
+    }
+
+    let cmd = "sudo dnf install -y hyprland-qtutils";
+    log::log_command(cmd);
+
+    let output = Command::new("sudo")
+        .args(["dnf", "install", "-y", "hyprland-qtutils"])
+        .output()?;
+
+    if output.status.success() {
+        ui::success("hyprland-qtutils installed successfully");
+        log::log("hyprland-qtutils installation completed");
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::log_error(&format!("hyprland-qtutils installation failed: {}", stderr));
+        ui::warning("Failed to install hyprland-qtutils (may not be available in your repos)");
+    }
+
+    Ok(())
+}
+
+pub fn install_quickshell(dry_run: bool) -> Result<()> {
+    ui::info("Building Quickshell from source...");
+
+    if dry_run {
+        ui::success("Would build Quickshell (dry-run)");
+        return Ok(());
+    }
+
+    // Clone Quickshell
+    ui::info("Cloning Quickshell...");
+    let cmd = "git clone --recursive https://github.com/qt6cn/quickshell /tmp/quickshell";
     log::log_command(cmd);
 
     let output = Command::new("git")
-        .args(["clone", "--depth", "1", "https://github.com/outfoxxed/quickshell", "/tmp/quickshell"])
+        .args([
+            "clone",
+            "--recursive",
+            "https://github.com/qt6cn/quickshell",
+            "/tmp/quickshell",
+        ])
         .output()?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        log::log_error(&stderr);
-        bail!("Failed to clone Quickshell");
+        log::log_error(&format!("Failed to clone Quickshell: {}", stderr));
+        bail!("Failed to clone Quickshell: {}", stderr);
     }
 
     ui::success("Cloned Quickshell");
@@ -201,9 +279,12 @@ pub fn install_quickshell(dry_run: bool) -> Result<()> {
 
     let output = Command::new("cmake")
         .args([
-            "-B", "/tmp/quickshell/build",
-            "-S", "/tmp/quickshell",
-            "-G", "Ninja",
+            "-B",
+            "/tmp/quickshell/build",
+            "-S",
+            "/tmp/quickshell",
+            "-G",
+            "Ninja",
             "-DCMAKE_BUILD_TYPE=Release",
             "-DUSE_JEMALLOC=ON",
             "-DX11=OFF",
@@ -214,14 +295,12 @@ pub fn install_quickshell(dry_run: bool) -> Result<()> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        log::log_error(&stderr);
-        bail!("Failed to configure Quickshell");
+        log::log_error(&format!("Failed to configure Quickshell: {}", stderr));
+        bail!("Failed to configure Quickshell: {}", stderr);
     }
 
-    ui::success("Configured Quickshell");
-
     // Build
-    ui::info("Building Quickshell (this may take a while)...");
+    ui::info("Building Quickshell...");
     let cmd = "cmake --build /tmp/quickshell/build";
     log::log_command(cmd);
 
@@ -231,11 +310,9 @@ pub fn install_quickshell(dry_run: bool) -> Result<()> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        log::log_error(&stderr);
-        bail!("Failed to build Quickshell");
+        log::log_error(&format!("Failed to build Quickshell: {}", stderr));
+        bail!("Failed to build Quickshell: {}", stderr);
     }
-
-    ui::success("Built Quickshell");
 
     // Install
     ui::info("Installing Quickshell...");
@@ -246,186 +323,69 @@ pub fn install_quickshell(dry_run: bool) -> Result<()> {
         .args(["cmake", "--install", "/tmp/quickshell/build"])
         .output()?;
 
-    if !output.status.success() {
+    if output.status.success() {
+        ui::success("Quickshell installed successfully");
+        log::log("Quickshell installation completed");
+    } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        log::log_error(&stderr);
-        bail!("Failed to install Quickshell");
+        log::log_error(&format!("Failed to install Quickshell: {}", stderr));
+        bail!("Failed to install Quickshell: {}", stderr);
     }
 
-    ui::success("Quickshell installed");
-    log::log("Quickshell installation complete");
+    // Cleanup
+    std::fs::remove_dir_all("/tmp/quickshell").ok();
 
     Ok(())
 }
 
 pub fn install_cava(dry_run: bool) -> Result<()> {
-    ui::info("Installing Cava from source...");
+    ui::info("Installing Cava...");
 
     if dry_run {
-        ui::success("Would build Cava from source (dry-run)");
+        ui::success("Would install Cava (dry-run)");
         return Ok(());
     }
 
-    // Check if already installed via pkg-config check
-    // If /usr/lib64/pkgconfig/cava.pc exists, we assume it's done.
-    if std::path::Path::new("/usr/lib64/pkgconfig/cava.pc").exists() {
-        ui::success("Cava already installed (checked pkg-config)");
-        return Ok(());
-    }
-
-    let build_dir = std::path::PathBuf::from("/tmp/cava-build");
-
-    // Clone repo
-    if build_dir.exists() {
-        std::fs::remove_dir_all(&build_dir).ok();
-    }
-
-    let cmd = "git clone --depth 1 https://github.com/karlstav/cava /tmp/cava-build";
+    // Clone Cava
+    ui::info("Cloning Cava...");
+    let cmd = "git clone https://github.com/karlstav/cava /tmp/cava";
     log::log_command(cmd);
 
     let output = Command::new("git")
-        .args(["clone", "--depth", "1", "https://github.com/karlstav/cava", "/tmp/cava-build"])
+        .args(["clone", "https://github.com/karlstav/cava", "/tmp/cava"])
         .output()?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        log::log_error(&stderr);
-        bail!("Failed to clone Cava");
+        log::log_error(&format!("Failed to clone Cava: {}", stderr));
+        bail!("Failed to clone Cava: {}", stderr);
     }
 
     ui::success("Cloned Cava");
 
-    // Configure with CMake (builds cavacore static lib)
-    ui::info("Configuring Cava...");
-    // CAVACORE.md says to use root CMakeLists
-    let cmd = "cmake -B build -S /tmp/cava-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON";
-    log::log_command(cmd);
-
-    let output = Command::new("cmake")
-        .args([
-            "-B", "/tmp/cava-build/build",
-            "-S", "/tmp/cava-build",
-            "-G", "Ninja",
-            "-DCMAKE_BUILD_TYPE=Release",
-            "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
-        ])
-        .output()?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        log::log_error(&stderr);
-        bail!("Failed to configure Cava");
-    }
-
-    // Build
-    ui::info("Building Cava...");
-    let cmd = "cmake --build /tmp/cava-build/build";
-    log::log_command(cmd);
-
-    let output = Command::new("cmake")
-        .args(["--build", "/tmp/cava-build/build"])
-        .output()?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        log::log_error(&stderr);
-        bail!("Failed to build Cava");
-    }
-
-    ui::success("Built Cava");
-
-    // Manual Install
-    ui::info("Installing Cava library and headers...");
-
-    // Install header
-    let cmd = "sudo cp /tmp/cava-build/cavacore.h /usr/include/";
-    log::log_command(cmd);
-    Command::new("sudo")
-        .args(["cp", "/tmp/cava-build/cavacore.h", "/usr/include/"])
-        .status()?;
-
-    // Create cava directory and symlink as cavacore.h for compatibility
-    let cmd = "sudo mkdir -p /usr/include/cava";
-    log::log_command(cmd);
-    Command::new("sudo")
-        .args(["mkdir", "-p", "/usr/include/cava"])
-        .status()?;
-
-    let cmd = "sudo ln -sf /usr/include/cavacore.h /usr/include/cava/cavacore.h";
-    log::log_command(cmd);
-    Command::new("sudo")
-        .args(["ln", "-sf", "/usr/include/cavacore.h", "/usr/include/cava/cavacore.h"])
-        .status()?;
-
-    // Install library
-    let cmd = "sudo cp /tmp/cava-build/build/libcavacore.a /usr/lib64/";
-    log::log_command(cmd);
-    Command::new("sudo")
-        .args(["cp", "/tmp/cava-build/build/libcavacore.a", "/usr/lib64/"])
-        .status()?;
-
-    // Create pkg-config file
-    ui::info("Creating cava.pc...");
-    let pc_content = r#"prefix=/usr
-exec_prefix=${prefix}
-libdir=${exec_prefix}/lib64
-includedir=${prefix}/include
-
-Name: cava
-Description: Cava Core Library
-Version: 0.10.3
-Libs: -L${libdir} -lcavacore -lfftw3 -lm -liniparser
-Cflags: -I${includedir}
-"#;
-
-    let pc_path = "/tmp/cava-build/cava.pc";
-    std::fs::write(pc_path, pc_content)?;
-
-    let cmd = "sudo cp /tmp/cava-build/cava.pc /usr/lib64/pkgconfig/";
-    log::log_command(cmd);
-    Command::new("sudo")
-        .args(["cp", pc_path, "/usr/lib64/pkgconfig/"])
-        .status()?;
-
-    ui::success("Cava installed");
-    log::log("Cava installation complete");
-
-    Ok(())
-}
-
-pub fn install_rust(dry_run: bool) -> Result<()> {
-    ui::info("Installing Rust toolchain...");
-
-    if dry_run {
-        ui::success("Would install Rust (dry-run)");
-        return Ok(());
-    }
-
-    // Check if already installed
-    if which::which("rustc").is_ok() && which::which("cargo").is_ok() {
-        ui::success("Rust already installed");
-        return Ok(());
-    }
-
-    let cmd = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y";
+    // Build and install
+    ui::info("Building and installing Cava...");
+    let cmd = "cd /tmp/cava && ./autogen.sh && ./configure && make && sudo make install";
     log::log_command(cmd);
 
     let output = Command::new("sh")
-        .args(["-c", "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"])
+        .arg("-c")
+        .arg(cmd)
         .output()?;
 
-    log::log_output(&String::from_utf8_lossy(&output.stdout));
-
     if output.status.success() {
-        ui::success("Rust installed");
-        log::log("Rust installation complete");
-        ui::info("Note: You may need to restart your shell or run 'source ~/.cargo/env'");
-        Ok(())
+        ui::success("Cava installed successfully");
+        log::log("Cava installation completed");
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        log::log_error(&stderr);
-        bail!("Failed to install Rust");
+        log::log_error(&format!("Failed to install Cava: {}", stderr));
+        bail!("Failed to install Cava: {}", stderr);
     }
+
+    // Cleanup
+    std::fs::remove_dir_all("/tmp/cava").ok();
+
+    Ok(())
 }
 
 pub fn install_fonts(dry_run: bool) -> Result<()> {
@@ -454,7 +414,9 @@ pub fn install_fonts(dry_run: bool) -> Result<()> {
             .args(["-L", "-o", mat_target.to_str().unwrap(), url])
             .output()?;
 
-        if !output.status.success() {
+        if output.status.success() {
+            ui::success("Material Symbols Rounded downloaded");
+        } else {
             ui::warning("Failed to download Material Symbols Rounded");
         }
     } else {
@@ -476,13 +438,28 @@ pub fn install_fonts(dry_run: bool) -> Result<()> {
         
         if output.status.success() {
             ui::info("Extracting Caskaydia Cove...");
-            // Unzip content
+            // Extract all files first
             let output = Command::new("unzip")
-                .args(["-o", zip_path, "-d", font_dir.to_str().unwrap(), "CaskaydiaCoveNerdFont*.ttf"])
+                .args(["-o", zip_path, "-d", font_dir.to_str().unwrap()])
                 .output()?;
             
             if !output.status.success() {
-                 ui::warning("Failed to extract Caskaydia Cove");
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                log::log_error(&format!("Failed to extract Caskaydia Cove: {}", stderr));
+                ui::warning("Failed to extract Caskaydia Cove");
+            } else {
+                // Clean up non-TTF files
+                for entry in std::fs::read_dir(&font_dir)? {
+                    let entry = entry?;
+                    let path = entry.path();
+                    if let Some(fname) = path.file_name() {
+                        let name = fname.to_str().unwrap_or("");
+                        if name.starts_with("CaskaydiaCove") && !name.ends_with(".ttf") {
+                            std::fs::remove_file(path).ok();
+                        }
+                    }
+                }
+                ui::success("Caskaydia Cove extracted successfully");
             }
             std::fs::remove_file(zip_path).ok();
         } else {
@@ -493,7 +470,10 @@ pub fn install_fonts(dry_run: bool) -> Result<()> {
     }
     
     // Update font cache
-    let _ = Command::new("fc-cache").args(["-fv"]).output();
+    let cache_output = Command::new("fc-cache").args(["-fv"]).output();
+    if !cache_output.as_ref().map_or(true, |o| o.status.success()) {
+        ui::warning("Font cache update failed, fonts may not be available immediately");
+    }
 
     ui::success("Fonts installed");
     log::log("Font installation complete");
@@ -501,132 +481,7 @@ pub fn install_fonts(dry_run: bool) -> Result<()> {
     Ok(())
 }
 
-pub fn install_hyprland_qt_support(dry_run: bool) -> Result<()> {
-    ui::info("Installing hyprland-qt-support...");
-    
-    if dry_run {
-        ui::success("Would install hyprland-qt-support (dry-run)");
-        return Ok(());
-    }
-
-    if std::path::Path::new("/usr/lib64/libhyprland-qt-support.so").exists() {
-        ui::success("hyprland-qt-support already installed");
-        return Ok(());
-    }
-
-    let tmp_dir = std::path::PathBuf::from("/tmp/hyprland-qt-support");
-    if tmp_dir.exists() {
-        std::fs::remove_dir_all(&tmp_dir).ok();
-    }
-
-    ui::info("Cloning hyprland-qt-support...");
-    Command::new("git")
-        .args(["clone", "https://github.com/hyprwm/hyprland-qt-support", "/tmp/hyprland-qt-support"])
-        .output()?;
-
-    ui::info("Configuring hyprland-qt-support...");
-    let output = Command::new("cmake")
-        .args([
-            "-B", "/tmp/hyprland-qt-support/build",
-            "-S", "/tmp/hyprland-qt-support",
-            "-G", "Ninja",
-            "-DCMAKE_BUILD_TYPE=Release",
-            "-DCMAKE_INSTALL_PREFIX=/usr",
-            "-DCMAKE_INSTALL_LIBDIR=lib64",
-        ])
-        .output()?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        log::log_error(&stderr);
-        bail!("Failed to configure hyprland-qt-support");
-    }
-    
-    ui::info("Building hyprland-qt-support...");
-    let output = Command::new("cmake")
-        .args(["--build", "/tmp/hyprland-qt-support/build"])
-        .output()?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        log::log_error(&stderr);
-        bail!("Failed to build hyprland-qt-support");
-    }
-
-    ui::info("Installing hyprland-qt-support...");
-    Command::new("sudo")
-        .args(["cmake", "--install", "/tmp/hyprland-qt-support/build"])
-        .status()?;
-
-    ui::success("Installed hyprland-qt-support");
-    Ok(())
-}
-
-pub fn install_hyprland_qtutils(dry_run: bool) -> Result<()> {
-    ui::info("Installing hyprland-qtutils...");
-    
-    if dry_run {
-        ui::success("Would install hyprland-qtutils (dry-run)");
-        return Ok(());
-    }
-
-    if which::which("hyprland-dialog").is_ok() {
-         ui::success("hyprland-qtutils already installed");
-         return Ok(());
-    }
-
-    // Verify critical Qt packages are installed
-    verify_qt_packages()?;
-
-    let tmp_dir = std::path::PathBuf::from("/tmp/hyprland-qtutils");
-    if tmp_dir.exists() {
-        std::fs::remove_dir_all(&tmp_dir).ok();
-    }
-
-    ui::info("Cloning hyprland-qtutils...");
-    Command::new("git")
-        .args(["clone", "https://github.com/hyprwm/hyprland-qtutils", "/tmp/hyprland-qtutils"])
-        .output()?;
-
-    ui::info("Configuring hyprland-qtutils...");
-    let output = Command::new("cmake")
-        .args([
-            "-B", "/tmp/hyprland-qtutils/build",
-            "-S", "/tmp/hyprland-qtutils",
-            "-G", "Ninja",
-            "-DCMAKE_BUILD_TYPE=Release",
-            "-DCMAKE_INSTALL_PREFIX=/usr",
-            "-DQt6_DIR=/usr/lib64/cmake/Qt6",
-        ])
-        .output()?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        log::log_error(&stderr);
-        bail!("Failed to configure hyprland-qtutils");
-    }
-    
-    ui::info("Building hyprland-qtutils...");
-    let output = Command::new("cmake")
-        .args(["--build", "/tmp/hyprland-qtutils/build"])
-        .output()?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        log::log_error(&stderr);
-        bail!("Failed to build hyprland-qtutils");
-    }
-
-    ui::info("Installing hyprland-qtutils...");
-    Command::new("sudo")
-        .args(["cmake", "--install", "/tmp/hyprland-qtutils/build"])
-        .status()?;
-
-    ui::success("Installed hyprland-qtutils");
-    Ok(())
-}
-
-fn verify_qt_packages() -> Result<()> {
+pub fn verify_qt_packages() -> Result<()> {
     ui::info("Verifying Qt development packages...");
     
     let critical_packages = &[
@@ -638,47 +493,23 @@ fn verify_qt_packages() -> Result<()> {
         "ninja-build",
         "gcc-c++",
         "pkgconf",
-        "fftw-devel",
-        "iniparser-devel",
-        "libqalculate-devel",
-        "pipewire-devel",
-        "aubio-devel",
     ];
     
-    let mut missing = Vec::new();
-    
     for pkg in critical_packages {
+        let cmd = format!("rpm -q {}", pkg);
+        log::log_command(&cmd);
+        
         let output = Command::new("rpm")
             .args(["-q", pkg])
             .output()?;
             
         if !output.status.success() {
-            missing.push(*pkg);
+            ui::error(&format!("Critical package not found: {}", pkg));
+            bail!("Missing required package: {}", pkg);
         }
     }
     
-    if !missing.is_empty() {
-        ui::warning("Missing critical Qt packages:");
-        for pkg in &missing {
-            ui::warning(&format!("  - {}", pkg));
-        }
-        
-        ui::info("Installing missing Qt packages...");
-        let mut args = vec!["dnf", "install", "-y"];
-        args.extend(missing.iter().copied());
-        
-        let output = Command::new("sudo").args(&args).output()?;
-        
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            log::log_error(&stderr);
-            bail!("Failed to install missing Qt packages");
-        }
-        
-        ui::success("Missing Qt packages installed");
-    } else {
-        ui::success("All critical Qt packages are installed");
-    }
+    ui::success("All critical Qt packages are installed");
     
     // Verify Qt6QuickPrivate component is available
     let quickprivate_path = "/usr/lib64/cmake/Qt6QuickPrivate/Qt6QuickPrivateConfig.cmake";

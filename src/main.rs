@@ -24,6 +24,8 @@ fn main() {
         ui::error(&format!("Installation failed: {}", e));
         ui::info("Check the log for details:");
         log::show_recent_logs(20);
+    ui::print_diagnostics();
+    ui::print_troubleshooting();
         std::process::exit(1);
     }
 }
