@@ -167,5 +167,20 @@ pub fn init_scheme(dry_run: bool) -> Result<()> {
 
     ui::success("Created caelestia config directory");
 
+    // Customize Starship prompt symbols (Override upstream dotfiles)
+    // ~/.config/starship.toml is a symlink to ~/.local/share/caelestia/starship.toml
+    // We should modify the target file.
+    let starship_config = home.join(".local/share/caelestia/starship.toml");
+    if starship_config.exists() {
+        let content = std::fs::read_to_string(&starship_config)?;
+        let new_content = content
+            .replace("symbol = \"⋈┈\"", "symbol = \"➜ \"")
+            .replace("success_symbol = \"[◎](bold italic bright-yellow)\"", "success_symbol = \"[✔](bold italic bright-green)\"")
+            .replace("error_symbol = \"[○](italic purple)\"", "error_symbol = \"[✘](italic bold red)\"");
+        
+        std::fs::write(starship_config, new_content)?;
+        ui::success("Customized Starship prompt symbols");
+    }
+
     Ok(())
 }
