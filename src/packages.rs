@@ -22,6 +22,7 @@ const PACKAGES: &[&str] = &[
     "qt6-qtbase-devel",
     "qt6-qtdeclarative-devel",
     "qt6-qtdeclarative-static",
+    "qt6-qtbase-static",
     "qt6-qtwayland-devel",
     "qt6-qtsvg-devel",
     "qt6-qtshadertools-devel",
@@ -168,6 +169,9 @@ pub fn install_quickshell(dry_run: bool) -> Result<()> {
         return Ok(());
     }
 
+    // Verify critical Qt packages are installed
+    verify_qt_packages()?;
+
     let build_dir = std::path::PathBuf::from("/tmp/quickshell");
 
     // Clone repo
@@ -204,6 +208,7 @@ pub fn install_quickshell(dry_run: bool) -> Result<()> {
             "-DUSE_JEMALLOC=ON",
             "-DX11=OFF",
             "-DCRASH_REPORTER=OFF",
+            "-DQt6_DIR=/usr/lib64/cmake/Qt6",
         ])
         .output()?;
 
@@ -507,7 +512,7 @@ pub fn install_hyprland_qt_support(dry_run: bool) -> Result<()> {
         .output()?;
 
     ui::info("Configuring hyprland-qt-support...");
-    Command::new("cmake")
+    let output = Command::new("cmake")
         .args([
             "-B", "/tmp/hyprland-qt-support/build",
             "-S", "/tmp/hyprland-qt-support",
@@ -517,11 +522,23 @@ pub fn install_hyprland_qt_support(dry_run: bool) -> Result<()> {
             "-DCMAKE_INSTALL_LIBDIR=lib64",
         ])
         .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::log_error(&stderr);
+        bail!("Failed to configure hyprland-qt-support");
+    }
     
     ui::info("Building hyprland-qt-support...");
-    Command::new("cmake")
+    let output = Command::new("cmake")
         .args(["--build", "/tmp/hyprland-qt-support/build"])
         .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::log_error(&stderr);
+        bail!("Failed to build hyprland-qt-support");
+    }
 
     ui::info("Installing hyprland-qt-support...");
     Command::new("sudo")
@@ -556,7 +573,7 @@ pub fn install_hyprland_qtutils(dry_run: bool) -> Result<()> {
         .output()?;
 
     ui::info("Configuring hyprland-qtutils...");
-    Command::new("cmake")
+    let output = Command::new("cmake")
         .args([
             "-B", "/tmp/hyprland-qtutils/build",
             "-S", "/tmp/hyprland-qtutils",
@@ -565,11 +582,23 @@ pub fn install_hyprland_qtutils(dry_run: bool) -> Result<()> {
             "-DCMAKE_INSTALL_PREFIX=/usr",
         ])
         .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::log_error(&stderr);
+        bail!("Failed to configure hyprland-qtutils");
+    }
     
     ui::info("Building hyprland-qtutils...");
-    Command::new("cmake")
+    let output = Command::new("cmake")
         .args(["--build", "/tmp/hyprland-qtutils/build"])
         .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::log_error(&stderr);
+        bail!("Failed to build hyprland-qtutils");
+    }
 
     ui::info("Installing hyprland-qtutils...");
     Command::new("sudo")
@@ -577,5 +606,64 @@ pub fn install_hyprland_qtutils(dry_run: bool) -> Result<()> {
         .status()?;
 
     ui::success("Installed hyprland-qtutils");
+    Ok(())
+}
+
+fn verify_qt_packages() -> Result<()> {
+    ui::info("Verifying Qt development packages...");
+    
+    let critical_packages = &[
+        "qt6-qtbase-devel",
+        "qt6-qtdeclarative-devel", 
+        "qt6-qtwayland-devel",
+        "qt6-qtbase-private-devel",
+        "cmake",
+        "ninja-build",
+        "gcc-c++",
+        "pkgconf",
+    ];
+    
+    let mut missing = Vec::new();
+    
+    for pkg in critical_packages {
+        let output = Command::new("rpm")
+            .args(["-q", pkg])
+            .output()?;
+            
+        if !output.status.success() {
+            missing.push(*pkg);
+        }
+    }
+    
+    if !missing.is_empty() {
+        ui::warning("Missing critical Qt packages:");
+        for pkg in &missing {
+            ui::warning(&format!("  - {}", pkg));
+        }
+        
+        ui::info("Installing missing Qt packages...");
+        let mut args = vec!["dnf", "install", "-y"];
+        args.extend(missing.iter().copied());
+        
+        let output = Command::new("sudo").args(&args).output()?;
+        
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            log::log_error(&stderr);
+            bail!("Failed to install missing Qt packages");
+        }
+        
+        ui::success("Missing Qt packages installed");
+    } else {
+        ui::success("All critical Qt packages are installed");
+    }
+    
+    // Verify Qt6QuickPrivate component is available
+    let quickprivate_path = "/usr/lib64/cmake/Qt6QuickPrivate/Qt6QuickPrivateConfig.cmake";
+    if !std::path::Path::new(quickprivate_path).exists() {
+        bail!("Qt6QuickPrivate component not found at {}. Please ensure qt6-qtdeclarative-devel is properly installed.", quickprivate_path);
+    }
+    ui::success("Qt6QuickPrivate component is available");
+    
     Ok(())
 }
