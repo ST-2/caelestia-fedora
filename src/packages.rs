@@ -9,6 +9,8 @@ const PACKAGES: &[&str] = &[
     // "hyprland-qtutils",
     "xdg-desktop-portal-hyprland",
     "xdg-desktop-portal-gtk",
+    "hyprutils-devel",
+    "hyprlang-devel",
     // Terminal
     "foot",
     // Shell and tools
