@@ -12,14 +12,14 @@ $mainMod = SUPER
 
 # Applications
 bind = $mainMod, Return, exec, foot
-bind = $mainMod, D, exec, quickshell -c caelestia launcher
+bind = $mainMod, Space, exec, quickshell -c caelestia launcher
 bind = $mainMod, E, exec, foot -e yazi
 bind = $mainMod, B, exec, firefox
 
 # Window management
-bind = $mainMod, Q, killactive
+bind = $mainMod, W, killactive
 bind = $mainMod, F, fullscreen
-bind = $mainMod, Space, togglefloating
+bind = $mainMod, T, togglefloating
 bind = $mainMod, P, pseudo
 bind = $mainMod, J, togglesplit
 
@@ -30,7 +30,7 @@ bind = $mainMod, up, movefocus, u
 bind = $mainMod, down, movefocus, d
 
 bind = $mainMod, H, movefocus, l
-bind = $mainMod, L, movefocus, r
+# bind = $mainMod, L, movefocus, r # Removed to allow Super+L for locking
 bind = $mainMod, K, movefocus, u
 bind = $mainMod, J, movefocus, d
 
@@ -99,10 +99,13 @@ bind = , Print, exec, grim -g "$(slurp)" - | swappy -f -
 bind = SHIFT, Print, exec, grim - | swappy -f -
 
 # Lock screen
-bind = $mainMod, Escape, exec, hyprlock
+bind = $mainMod, L, exec, hyprlock
 
 # Exit Hyprland
 bind = $mainMod SHIFT, E, exit
+
+# Gestures (v0.51+)
+gesture = 3, horizontal, workspace
 "#;
 
 pub fn setup_keybinds(dry_run: bool) -> Result<()> {
