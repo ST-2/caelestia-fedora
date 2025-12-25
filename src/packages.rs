@@ -26,6 +26,14 @@ const PACKAGES: &[&str] = &[
     "git",
     "curl",
     "tar",
+    // Python build tools for caelestia-cli
+    "python3-build",
+    "python3-hatchling",
+    "python3-pip",
+    // caelestia-cli dependencies
+    "libnotify",
+    "fuzzel",
+    "glib2-devel",
     // Theming
     "adw-gtk3-theme",
     "papirus-icon-theme",

@@ -1,4 +1,5 @@
 pub mod checks;
+pub mod cli;
 pub mod dotfiles;
 pub mod greetd;
 pub mod keybinds;

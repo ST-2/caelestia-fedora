@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 
-use caelestia_installer::{checks, dotfiles, greetd, keybinds, log, packages, repos, shell, ui};
+use caelestia_installer::{checks, cli, dotfiles, greetd, keybinds, log, packages, repos, shell, ui};
 
 #[derive(Parser)]
 #[command(name = "caelestia-installer")]
@@ -48,7 +48,7 @@ fn run(cli: Cli) -> Result<()> {
         }
     }
 
-    let mut progress = ui::Progress::new(9);
+    let mut progress = ui::Progress::new(11);
 
     // Step 1: Pre-flight checks
     progress.step("Running pre-flight checks...");
@@ -68,23 +68,31 @@ fn run(cli: Cli) -> Result<()> {
     progress.step("Cloning dotfiles repositories...");
     dotfiles::clone_repos(cli.dry_run)?;
 
-    // Step 5: Build shell widgets
+    // Step 5: Install caelestia-cli
+    progress.step("Installing caelestia-cli...");
+    cli::install_cli(cli.dry_run)?;
+
+    // Step 6: Initialize color scheme
+    progress.step("Initializing color scheme...");
+    cli::init_scheme(cli.dry_run)?;
+
+    // Step 7: Build shell widgets
     progress.step("Building caelestia-shell...");
     dotfiles::build_shell(cli.dry_run)?;
 
-    // Step 6: Symlink configs
+    // Step 8: Symlink configs
     progress.step("Symlinking configurations...");
     dotfiles::symlink_configs(cli.dry_run)?;
 
-    // Step 7: Set up shell (fish)
+    // Step 9: Set up shell (fish)
     progress.step("Setting up Fish shell...");
     shell::setup_all(cli.dry_run)?;
 
-    // Step 8: Set up keybinds
+    // Step 10: Set up keybinds
     progress.step("Setting up Hyprland keybinds...");
     keybinds::setup_keybinds(cli.dry_run)?;
 
-    // Step 9: Set up greetd (optional, may need confirmation)
+    // Step 11: Set up greetd (optional, may need confirmation)
     if cli.noconfirm || ui::prompt("Set up greetd/tuigreet as display manager?") {
         greetd::setup_all(cli.dry_run)?;
     }

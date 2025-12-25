@@ -32,15 +32,23 @@ fn create_greeter_user(dry_run: bool) -> Result<()> {
     if let Ok(output) = check {
         if output.status.success() {
             ui::success("Greeter user already exists");
+            // Ensure home directory exists anyway
+            let _ = Command::new("sudo")
+                .args(["mkdir", "-p", "/var/lib/greeter"])
+                .output();
+            let _ = Command::new("sudo")
+                .args(["chown", "greeter:greeter", "/var/lib/greeter"])
+                .output();
             return Ok(());
         }
     }
 
-    let cmd = "sudo useradd -r -s /usr/sbin/nologin greeter";
+    // Create user with home directory
+    let cmd = "sudo useradd -r -d /var/lib/greeter -s /usr/sbin/nologin greeter";
     log::log_command(cmd);
 
     let output = Command::new("sudo")
-        .args(["useradd", "-r", "-s", "/usr/sbin/nologin", "greeter"])
+        .args(["useradd", "-r", "-d", "/var/lib/greeter", "-s", "/usr/sbin/nologin", "greeter"])
         .output()?;
 
     if output.status.success() {
@@ -49,6 +57,14 @@ fn create_greeter_user(dry_run: bool) -> Result<()> {
     } else {
         ui::warning("Could not create greeter user (may already exist)");
     }
+
+    // Create home directory
+    let _ = Command::new("sudo")
+        .args(["mkdir", "-p", "/var/lib/greeter"])
+        .output();
+    let _ = Command::new("sudo")
+        .args(["chown", "greeter:greeter", "/var/lib/greeter"])
+        .output();
 
     Ok(())
 }
