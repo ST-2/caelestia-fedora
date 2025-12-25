@@ -25,6 +25,7 @@ const PACKAGES: &[&str] = &[
     "gcc-c++",
     "git",
     "curl",
+    "tar",
     // Theming
     "adw-gtk3-theme",
     "papirus-icon-theme",
