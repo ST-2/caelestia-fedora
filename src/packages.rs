@@ -1,5 +1,6 @@
 use anyhow::{bail, Result};
 use std::process::Command;
+use std::process::Command;
 
 use crate::{log, ui};
 
@@ -226,7 +227,6 @@ pub fn install_starship(dry_run: bool) -> Result<()> {
         Ok(())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        let stdout = String::from_utf8_lossy(&output.stdout);
         log::log_error(&stderr);
         bail!("Failed to install Starship");
     }
@@ -256,16 +256,15 @@ pub fn install_quickshell(dry_run: bool) -> Result<()> {
         std::fs::remove_dir_all(&build_dir).ok();
     }
 
-    let cmd = "git clone --depth 1 https://github.com/outfoxxed/quickshell /tmp/quickshell";
+    let cmd = "git clone --depth 1 https://git.outfoxxed.me/outfoxxed/quickshell.git /tmp/quickshell";
     log::log_command(cmd);
 
     let output = Command::new("git")
-        .args(["clone", "--depth", "1", "https://github.com/outfoxxed/quickshell", "/tmp/quickshell"])
+        .args(["clone", "--depth", "1", "https://git.outfoxxed.me/outfoxxed/quickshell.git", "/tmp/quickshell"])
         .output()?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        let stdout = String::from_utf8_lossy(&output.stdout);
         log::log_error(&stderr);
         bail!("Failed to clone Quickshell");
     }
@@ -305,21 +304,41 @@ pub fn install_quickshell(dry_run: bool) -> Result<()> {
 
     // Build
     ui::info("Building Quickshell (this may take a while)...");
-    let cmd = "cmake --build /tmp/quickshell/build";
-    log::log_command(cmd);
+    let jobs = crate::system::get_ninja_jobs();
+    let mut build_args = vec!["--build", "/tmp/quickshell/build"];
+    let jobs_str;
+    if jobs > 0 {
+        build_args.push("-j");
+        jobs_str = jobs.to_string();
+        build_args.push(&jobs_str);
+    }
 
     let output = Command::new("cmake")
-        .args(["--build", "/tmp/quickshell/build"])
+        .args(&build_args)
         .output()?;
 
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // Always log both for debugging
+    log::log("=== BUILD STDOUT ===");
+    log::log_output(&stdout);
+    log::log("=== BUILD STDERR ===");
+    log::log_error(&stderr);
+
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        // Log both stdout and stderr - CMake/Ninja output errors to stdout
-        log::log("=== BUILD STDOUT ===");
-        log::log_output(&stdout);
-        log::log("=== BUILD STDERR ===");
-        log::log_error(&stderr);
+        ui::error("Build failed!");
+        
+        // Print the last 2000 chars of stdout which likely contains the error
+        if !stdout.is_empty() {
+            let start = stdout.len().saturating_sub(2000);
+            println!("STDOUT (last 2000 chars):\n{}", &stdout[start..]);
+        }
+        if !stderr.is_empty() {
+            println!("STDERR:\n{}", stderr);
+        }
+
+        crate::system::check_oom_event();
         bail!("Failed to build Quickshell. Check ~/.cache/caelestia-installer/install.log for details.");
     }
 
@@ -336,7 +355,6 @@ pub fn install_quickshell(dry_run: bool) -> Result<()> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        let stdout = String::from_utf8_lossy(&output.stdout);
         log::log_error(&stderr);
         bail!("Failed to install Quickshell");
     }
@@ -378,7 +396,6 @@ pub fn install_cava(dry_run: bool) -> Result<()> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        let stdout = String::from_utf8_lossy(&output.stdout);
         log::log_error(&stderr);
         bail!("Failed to clone Cava");
     }
@@ -403,24 +420,32 @@ pub fn install_cava(dry_run: bool) -> Result<()> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        let stdout = String::from_utf8_lossy(&output.stdout);
         log::log_error(&stderr);
         bail!("Failed to configure Cava");
     }
 
     // Build
     ui::info("Building Cava...");
-    let cmd = "cmake --build /tmp/cava-build/build";
-    log::log_command(cmd);
+    let jobs = crate::system::get_ninja_jobs();
+    let mut build_args = vec!["--build", "/tmp/cava-build/build"];
+    let jobs_str;
+    if jobs > 0 {
+        build_args.push("-j");
+        jobs_str = jobs.to_string();
+        build_args.push(&jobs_str);
+    }
 
     let output = Command::new("cmake")
-        .args(["--build", "/tmp/cava-build/build"])
+        .args(&build_args)
         .output()?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
+        log::log("=== Cava BUILD STDOUT ===");
+        log::log_output(&stdout);
         log::log_error(&stderr);
+        crate::system::check_oom_event();
         bail!("Failed to build Cava");
     }
 
@@ -637,14 +662,26 @@ pub fn install_hyprland_qt_support(dry_run: bool) -> Result<()> {
     }
     
     ui::info("Building hyprland-qt-support...");
+    let jobs = crate::system::get_ninja_jobs();
+    let mut build_args = vec!["--build", "/tmp/hyprland-qt-support/build"];
+    let jobs_str;
+    if jobs > 0 {
+        build_args.push("-j");
+        jobs_str = jobs.to_string();
+        build_args.push(&jobs_str);
+    }
+
     let output = Command::new("cmake")
-        .args(["--build", "/tmp/hyprland-qt-support/build"])
+        .args(&build_args)
         .output()?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
+        log::log("=== hyprland-qt-support BUILD STDOUT ===");
+        log::log_output(&stdout);
         log::log_error(&stderr);
+        crate::system::check_oom_event();
         bail!("Failed to build hyprland-qt-support");
     }
 
@@ -703,14 +740,26 @@ pub fn install_hyprland_qtutils(dry_run: bool) -> Result<()> {
     }
     
     ui::info("Building hyprland-qtutils...");
+    let jobs = crate::system::get_ninja_jobs();
+    let mut build_args = vec!["--build", "/tmp/hyprland-qtutils/build"];
+    let jobs_str;
+    if jobs > 0 {
+        build_args.push("-j");
+        jobs_str = jobs.to_string();
+        build_args.push(&jobs_str);
+    }
+
     let output = Command::new("cmake")
-        .args(["--build", "/tmp/hyprland-qtutils/build"])
+        .args(&build_args)
         .output()?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
+        log::log("=== hyprland-qtutils BUILD STDOUT ===");
+        log::log_output(&stdout);
         log::log_error(&stderr);
+        crate::system::check_oom_event();
         bail!("Failed to build hyprland-qtutils");
     }
 

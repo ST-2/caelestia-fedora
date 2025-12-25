@@ -114,29 +114,61 @@ pub fn build_shell(dry_run: bool) -> Result<()> {
         ])
         .output()?;
 
+    // Always log both stdout and stderr for debugging
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    log::log("=== SHELL CMAKE CONFIGURE STDOUT ===");
+    log::log_output(&stdout);
+    log::log("=== SHELL CMAKE CONFIGURE STDERR ===");
+    log::log_error(&stderr);
+
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        log::log_error(&stderr);
         ui::error("CMake configure failed:");
-        println!("{}", stderr); // Print directly to see it
-        bail!("CMake configure failed: {}", stderr);
+        // Print both stdout and stderr - cmake errors often go to stdout
+        if !stdout.is_empty() {
+            println!("STDOUT:\n{}", stdout);
+        }
+        if !stderr.is_empty() {
+            println!("STDERR:\n{}", stderr);
+        }
+        bail!("CMake configure failed. Check ~/.cache/caelestia-installer/install.log for details.");
     }
 
     // Ninja build
     ui::info("Compiling caelestia-shell...");
-    let ninja_cmd = format!("cmake --build {:?}", build_dir);
-    log::log_command(&ninja_cmd);
+    let jobs = crate::system::get_ninja_jobs();
+    let mut build_args = vec!["--build", build_dir.to_str().unwrap()];
+    let jobs_str;
+    if jobs > 0 {
+        build_args.push("-j");
+        jobs_str = jobs.to_string();
+        build_args.push(&jobs_str);
+    }
 
     let output = Command::new("cmake")
-        .args(["--build", build_dir.to_str().unwrap()])
+        .args(&build_args)
         .output()?;
 
+    // Always log both stdout and stderr for debugging
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    log::log("=== SHELL BUILD STDOUT ===");
+    log::log_output(&stdout);
+    log::log("=== SHELL BUILD STDERR ===");
+    log::log_error(&stderr);
+
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        log::log_error(&stderr);
         ui::error("Shell build failed:");
-        println!("{}", stderr);
-        bail!("Shell build failed: {}", stderr);
+        // Print both - ninja/cmake errors can be in either stream
+        if !stdout.is_empty() {
+            let start = stdout.len().saturating_sub(2000);
+            println!("STDOUT (last 2000 chars):\n{}", &stdout[start..]);
+        }
+        if !stderr.is_empty() {
+            println!("STDERR:\n{}", stderr);
+        }
+        crate::system::check_oom_event();
+        bail!("Shell build failed. Check ~/.cache/caelestia-installer/install.log for details.");
     }
 
     ui::success("Built caelestia-shell");
