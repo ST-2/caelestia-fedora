@@ -562,6 +562,9 @@ pub fn install_hyprland_qtutils(dry_run: bool) -> Result<()> {
          return Ok(());
     }
 
+    // Verify critical Qt packages are installed
+    verify_qt_packages()?;
+
     let tmp_dir = std::path::PathBuf::from("/tmp/hyprland-qtutils");
     if tmp_dir.exists() {
         std::fs::remove_dir_all(&tmp_dir).ok();
@@ -580,6 +583,7 @@ pub fn install_hyprland_qtutils(dry_run: bool) -> Result<()> {
             "-G", "Ninja",
             "-DCMAKE_BUILD_TYPE=Release",
             "-DCMAKE_INSTALL_PREFIX=/usr",
+            "-DQt6_DIR=/usr/lib64/cmake/Qt6",
         ])
         .output()?;
 
@@ -664,6 +668,13 @@ fn verify_qt_packages() -> Result<()> {
         bail!("Qt6QuickPrivate component not found at {}. Please ensure qt6-qtdeclarative-devel is properly installed.", quickprivate_path);
     }
     ui::success("Qt6QuickPrivate component is available");
+    
+    // Verify Qt6WaylandClientPrivate component is available
+    let wayland_private_path = "/usr/lib64/cmake/Qt6WaylandClientPrivate/Qt6WaylandClientPrivateConfig.cmake";
+    if !std::path::Path::new(wayland_private_path).exists() {
+        bail!("Qt6WaylandClientPrivate component not found at {}. Please ensure qt6-qtwayland-devel is properly installed.", wayland_private_path);
+    }
+    ui::success("Qt6WaylandClientPrivate component is available");
     
     Ok(())
 }
