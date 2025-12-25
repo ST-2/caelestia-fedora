@@ -184,6 +184,7 @@ pub fn install_quickshell(dry_run: bool) -> Result<()> {
             "-DCMAKE_BUILD_TYPE=Release",
             "-DUSE_JEMALLOC=ON",
             "-DX11=OFF",
+            "-DCRASH_REPORTER=OFF",
         ])
         .output()?;
 
