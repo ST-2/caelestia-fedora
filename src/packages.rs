@@ -1,6 +1,5 @@
 use anyhow::{bail, Result};
 use std::process::Command;
-use std::process::Command;
 
 use crate::{log, ui};
 
