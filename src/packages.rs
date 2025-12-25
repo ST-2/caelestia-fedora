@@ -481,3 +481,100 @@ pub fn install_fonts(dry_run: bool) -> Result<()> {
 
     Ok(())
 }
+
+pub fn install_hyprland_qt_support(dry_run: bool) -> Result<()> {
+    ui::info("Installing hyprland-qt-support...");
+    
+    if dry_run {
+        ui::success("Would install hyprland-qt-support (dry-run)");
+        return Ok(());
+    }
+
+    if std::path::Path::new("/usr/lib64/libhyprland-qt-support.so").exists() {
+        ui::success("hyprland-qt-support already installed");
+        return Ok(());
+    }
+
+    let tmp_dir = std::path::PathBuf::from("/tmp/hyprland-qt-support");
+    if tmp_dir.exists() {
+        std::fs::remove_dir_all(&tmp_dir).ok();
+    }
+
+    ui::info("Cloning hyprland-qt-support...");
+    Command::new("git")
+        .args(["clone", "https://github.com/hyprwm/hyprland-qt-support", "/tmp/hyprland-qt-support"])
+        .output()?;
+
+    ui::info("Configuring hyprland-qt-support...");
+    Command::new("cmake")
+        .args([
+            "-B", "/tmp/hyprland-qt-support/build",
+            "-S", "/tmp/hyprland-qt-support",
+            "-G", "Ninja",
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DCMAKE_INSTALL_PREFIX=/usr",
+            "-DCMAKE_INSTALL_LIBDIR=lib64",
+        ])
+        .output()?;
+    
+    ui::info("Building hyprland-qt-support...");
+    Command::new("cmake")
+        .args(["--build", "/tmp/hyprland-qt-support/build"])
+        .output()?;
+
+    ui::info("Installing hyprland-qt-support...");
+    Command::new("sudo")
+        .args(["cmake", "--install", "/tmp/hyprland-qt-support/build"])
+        .status()?;
+
+    ui::success("Installed hyprland-qt-support");
+    Ok(())
+}
+
+pub fn install_hyprland_qtutils(dry_run: bool) -> Result<()> {
+    ui::info("Installing hyprland-qtutils...");
+    
+    if dry_run {
+        ui::success("Would install hyprland-qtutils (dry-run)");
+        return Ok(());
+    }
+
+    if which::which("hyprland-dialog").is_ok() {
+         ui::success("hyprland-qtutils already installed");
+         return Ok(());
+    }
+
+    let tmp_dir = std::path::PathBuf::from("/tmp/hyprland-qtutils");
+    if tmp_dir.exists() {
+        std::fs::remove_dir_all(&tmp_dir).ok();
+    }
+
+    ui::info("Cloning hyprland-qtutils...");
+    Command::new("git")
+        .args(["clone", "https://github.com/hyprwm/hyprland-qtutils", "/tmp/hyprland-qtutils"])
+        .output()?;
+
+    ui::info("Configuring hyprland-qtutils...");
+    Command::new("cmake")
+        .args([
+            "-B", "/tmp/hyprland-qtutils/build",
+            "-S", "/tmp/hyprland-qtutils",
+            "-G", "Ninja",
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DCMAKE_INSTALL_PREFIX=/usr",
+        ])
+        .output()?;
+    
+    ui::info("Building hyprland-qtutils...");
+    Command::new("cmake")
+        .args(["--build", "/tmp/hyprland-qtutils/build"])
+        .output()?;
+
+    ui::info("Installing hyprland-qtutils...");
+    Command::new("sudo")
+        .args(["cmake", "--install", "/tmp/hyprland-qtutils/build"])
+        .status()?;
+
+    ui::success("Installed hyprland-qtutils");
+    Ok(())
+}

@@ -63,7 +63,10 @@ fn run(cli: Cli) -> Result<()> {
     packages::install_all(cli.dry_run)?;
     packages::install_starship(cli.dry_run)?;
     packages::install_rust(cli.dry_run)?;
-    packages::install_rust(cli.dry_run)?;
+    // Step 3b: Install Hyprland Qt utils
+    progress.step("Installing Hyprland Qt utils...");
+    packages::install_hyprland_qt_support(cli.dry_run)?;
+    packages::install_hyprland_qtutils(cli.dry_run)?;
 
     // Step 4: Build Quickshell from source
     progress.step("Building Quickshell...");
