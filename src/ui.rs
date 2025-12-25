@@ -158,5 +158,7 @@ pub fn print_troubleshooting() {
     println!("     cd ~/.config/quickshell/caelestia");
     println!("     rm -rf build && cmake -B build -S . && cmake --build build");
     println!("     sudo cmake --install build");
+    println!("  5. If Quickshell build fails due to Qt package conflicts:");
+    println!("     sudo dnf install --allowerasing qt6-qtbase-devel qt6-qtdeclarative-devel");
     println!();
 }
