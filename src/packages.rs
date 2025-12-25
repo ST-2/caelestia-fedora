@@ -344,6 +344,19 @@ pub fn install_cava(dry_run: bool) -> Result<()> {
         .args(["cp", "/tmp/cava-build/cavacore.h", "/usr/include/"])
         .status()?;
 
+    // Create cava directory and symlink as javacore.h for compatibility
+    let cmd = "sudo mkdir -p /usr/include/cava";
+    log::log_command(cmd);
+    Command::new("sudo")
+        .args(["mkdir", "-p", "/usr/include/cava"])
+        .status()?;
+
+    let cmd = "sudo ln -sf /usr/include/cavacore.h /usr/include/cava/javacore.h";
+    log::log_command(cmd);
+    Command::new("sudo")
+        .args(["ln", "-sf", "/usr/include/cavacore.h", "/usr/include/cava/javacore.h"])
+        .status()?;
+
     // Install library
     let cmd = "sudo cp /tmp/cava-build/build/libcavacore.a /usr/lib64/";
     log::log_command(cmd);
