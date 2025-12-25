@@ -12,9 +12,8 @@ const PACKAGES: &[&str] = &[
     // Terminal
     "foot",
     // Shell and tools
-    "zsh",
-    "zoxide",
-    "fzf",
+    "fish",
+    "starship",
     // Greetd
     "greetd",
     "greetd-tuigreet",

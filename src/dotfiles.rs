@@ -141,6 +141,7 @@ pub fn symlink_configs(dry_run: bool) -> Result<()> {
     let links = [
         ("hypr", "hypr"),
         ("foot", "foot"),
+        ("fish", "fish"),
         ("fastfetch", "fastfetch"),
         ("btop", "btop"),
         ("uwsm", "uwsm"),

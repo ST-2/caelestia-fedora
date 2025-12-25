@@ -76,8 +76,8 @@ fn run(cli: Cli) -> Result<()> {
     progress.step("Symlinking configurations...");
     dotfiles::symlink_configs(cli.dry_run)?;
 
-    // Step 7: Set up shell (zsh + zinit + zoxide + fzf)
-    progress.step("Setting up Zsh with Zinit, zoxide, and fzf...");
+    // Step 7: Set up shell (fish)
+    progress.step("Setting up Fish shell...");
     shell::setup_all(cli.dry_run)?;
 
     // Step 8: Set up keybinds
