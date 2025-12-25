@@ -3,6 +3,17 @@ use std::process::Command;
 
 use crate::{log, ui};
 
+// Critical Qt packages required for building Quickshell
+const CRITICAL_QT_PACKAGES: &[&str] = &[
+    "qt6-qtbase-devel",
+    "qt6-qtdeclarative-devel",
+    "qt6-qtwayland-devel",
+    "qt6-qtsvg-devel",
+    "qt6-qtshadertools-devel",
+    "qt6-qtbase-private-devel",
+    "qt6-qtconnectivity-devel",  // For Bluetooth (required by Quickshell)
+];
+
 const PACKAGES: &[&str] = &[
     // Hyprland and Wayland
     "hyprland",
@@ -93,7 +104,7 @@ pub fn install_all(dry_run: bool) -> Result<()> {
     ui::info("Installing packages via dnf...");
 
     let pkg_list = PACKAGES.join(" ");
-    let cmd = format!("sudo dnf install -y {}", pkg_list);
+    let cmd = format!("sudo dnf install -y --allowerasing {}", pkg_list);
     log::log_command(&cmd);
 
     if dry_run {
@@ -105,20 +116,82 @@ pub fn install_all(dry_run: bool) -> Result<()> {
         return Ok(());
     }
 
-    let mut args = vec!["dnf", "install", "-y"];
+    // Use --allowerasing to resolve conflicts between COPR and official repos
+    let mut args = vec!["dnf", "install", "-y", "--allowerasing"];
     args.extend(PACKAGES.iter().copied());
 
     let output = Command::new("sudo").args(&args).output()?;
 
-    log::log_output(&String::from_utf8_lossy(&output.stdout));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    log::log_output(&stdout);
+
+    // Check for skipped packages due to conflicts or broken dependencies
+    if stdout.contains("Skipping packages with conflicts") || stdout.contains("Skipping packages with broken dependencies") {
+        ui::warning("Some packages were skipped due to conflicts or broken dependencies");
+        log::log("WARNING: Some packages were skipped due to conflicts or broken dependencies");
+        
+        // Check if critical Qt packages were skipped by looking for package names
+        // in the "Skipping packages" section of the output
+        let mut skipped_critical = Vec::new();
+        
+        // Look for lines containing both "Skipping" context and package names
+        let lines: Vec<&str> = stdout.lines().collect();
+        let mut in_skipping_section = false;
+        
+        for line in &lines {
+            if line.contains("Skipping packages") {
+                in_skipping_section = true;
+                continue;
+            }
+            // End of skipping section when we hit an empty line or new section
+            if in_skipping_section && (line.trim().is_empty() || line.starts_with("Installing") || line.starts_with("Upgrading")) {
+                in_skipping_section = false;
+            }
+            
+            if in_skipping_section {
+                for pkg in CRITICAL_QT_PACKAGES.iter().take(3) { // Check main Qt packages
+                    if line.contains(pkg) {
+                        skipped_critical.push(*pkg);
+                    }
+                }
+            }
+        }
+        
+        if !skipped_critical.is_empty() {
+            ui::error("Critical Qt development packages were skipped:");
+            for pkg in &skipped_critical {
+                ui::error(&format!("  - {}", pkg));
+            }
+            ui::info("Attempting to install Qt packages with conflict resolution...");
+            
+            // Try to install Qt packages with allowerasing explicitly
+            let mut qt_args = vec!["dnf", "install", "-y", "--allowerasing"];
+            qt_args.extend(CRITICAL_QT_PACKAGES.iter().copied());
+            
+            let qt_output = Command::new("sudo")
+                .args(&qt_args)
+                .output()?;
+            
+            let qt_stdout = String::from_utf8_lossy(&qt_output.stdout);
+            log::log_output(&qt_stdout);
+            
+            if !qt_output.status.success() || qt_stdout.contains("Skipping packages") {
+                let qt_stderr = String::from_utf8_lossy(&qt_output.stderr);
+                log::log_error(&qt_stderr);
+                bail!("Failed to install critical Qt packages. You may need to manually resolve package conflicts.\n\
+                       Try running: sudo dnf install --allowerasing qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtwayland-devel");
+            }
+            
+            ui::success("Qt packages installed with conflict resolution");
+        }
+    }
 
     if output.status.success() {
-        ui::success("All packages installed");
+        ui::success("Package installation complete");
         log::log("Package installation complete");
         Ok(())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        let stdout = String::from_utf8_lossy(&output.stdout);
         log::log_error(&stderr);
         bail!("Failed to install packages");
     }
@@ -653,13 +726,8 @@ pub fn install_hyprland_qtutils(dry_run: bool) -> Result<()> {
 fn verify_qt_packages() -> Result<()> {
     ui::info("Verifying Qt development packages...");
     
-    let critical_packages = &[
-        "qt6-qtbase-devel",
-        "qt6-qtbase-private-devel",
-        "qt6-qtdeclarative-devel", 
-        "qt6-qtwayland-devel",
-        "qt6-qtshadertools-devel",
-        "qt6-qtconnectivity-devel",  // For Bluetooth (Quickshell)
+    // Additional build tools needed alongside Qt packages
+    let build_tools = &[
         "cmake",
         "ninja-build",
         "gcc-c++",
@@ -673,7 +741,19 @@ fn verify_qt_packages() -> Result<()> {
     
     let mut missing = Vec::new();
     
-    for pkg in critical_packages {
+    // Check critical Qt packages
+    for pkg in CRITICAL_QT_PACKAGES {
+        let output = Command::new("rpm")
+            .args(["-q", pkg])
+            .output()?;
+            
+        if !output.status.success() {
+            missing.push(*pkg);
+        }
+    }
+    
+    // Check build tools
+    for pkg in build_tools {
         let output = Command::new("rpm")
             .args(["-q", pkg])
             .output()?;
@@ -684,27 +764,59 @@ fn verify_qt_packages() -> Result<()> {
     }
     
     if !missing.is_empty() {
-        ui::warning("Missing critical Qt packages:");
+        ui::warning("Missing critical packages:");
         for pkg in &missing {
             ui::warning(&format!("  - {}", pkg));
         }
         
-        ui::info("Installing missing Qt packages...");
-        let mut args = vec!["dnf", "install", "-y"];
+        ui::info("Installing missing packages with conflict resolution...");
+        let mut args = vec!["dnf", "install", "-y", "--allowerasing"];
         args.extend(missing.iter().copied());
         
         let output = Command::new("sudo").args(&args).output()?;
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        log::log_output(&stdout);
+        
+        // Check if packages were skipped even after using --allowerasing
+        if stdout.contains("Skipping packages") {
+            ui::error("Some packages could not be installed due to unresolvable conflicts.");
+            ui::info("This may be caused by conflicting packages from COPR repositories.");
+            ui::info("Try the following manual steps:");
+            ui::info("  1. sudo dnf remove hyprland-qt-support hyprland-qtutils");
+            ui::info("  2. sudo dnf install --allowerasing qt6-qtbase-devel qt6-qtdeclarative-devel");
+            ui::info("  3. Re-run this installer");
+            log::log_error(&format!("Package conflicts detected, stdout: {}", stdout));
+            bail!("Failed to install Qt packages due to repository conflicts");
+        }
         
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-        let stdout = String::from_utf8_lossy(&output.stdout);
             log::log_error(&stderr);
-            bail!("Failed to install missing Qt packages");
+            bail!("Failed to install missing packages");
         }
         
-        ui::success("Missing Qt packages installed");
+        // Verify the packages were actually installed after the install attempt
+        let mut still_missing = Vec::new();
+        for pkg in &missing {
+            let verify_output = Command::new("rpm")
+                .args(["-q", pkg])
+                .output()?;
+            if !verify_output.status.success() {
+                still_missing.push(*pkg);
+            }
+        }
+        
+        if !still_missing.is_empty() {
+            ui::error("The following packages are still missing after install attempt:");
+            for pkg in &still_missing {
+                ui::error(&format!("  - {}", pkg));
+            }
+            bail!("Failed to install required packages. Check for repository conflicts.");
+        }
+        
+        ui::success("Missing packages installed");
     } else {
-        ui::success("All critical Qt packages are installed");
+        ui::success("All critical packages are installed");
     }
     
     // Verify Qt6QuickPrivate component is available
