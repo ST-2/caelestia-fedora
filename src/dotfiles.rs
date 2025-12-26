@@ -123,13 +123,29 @@ pub fn patch_qml_app2unit(dry_run: bool) -> Result<()> {
             Err(_) => continue,
         };
         
-        // Check if file contains app2unit reference without absolute path
-        if content.contains("app2unit") && !content.contains(&app2unit_path) {
-            // Replace relative app2unit references with absolute path
-            let patched_content = content
-                .replace("\"app2unit\"", &format!("\"{}\"", app2unit_path))
-                .replace("'app2unit'", &format!("'{}'", app2unit_path))
-                .replace(" app2unit ", &format!(" {} ", app2unit_path));
+        // Skip if file already contains the absolute path
+        if content.contains(&app2unit_path) {
+            continue;
+        }
+        
+        // Check if file contains app2unit reference that needs patching
+        // Look for specific patterns where app2unit is used as a command
+        let needs_patching = content.contains("\"app2unit\"") 
+            || content.contains("'app2unit'")
+            || content.contains("command: \"app2unit")
+            || content.contains("command: 'app2unit");
+        
+        if needs_patching {
+            // Replace only specific command references with absolute path
+            let mut patched_content = content.clone();
+            
+            // Pattern 1: command: "app2unit"
+            patched_content = patched_content.replace("command: \"app2unit\"", &format!("command: \"{}\"", app2unit_path));
+            patched_content = patched_content.replace("command: 'app2unit'", &format!("command: '{}'", app2unit_path));
+            
+            // Pattern 2: standalone "app2unit" or 'app2unit' in command contexts
+            patched_content = patched_content.replace(": \"app2unit\"", &format!(": \"{}\"", app2unit_path));
+            patched_content = patched_content.replace(": 'app2unit'", &format!(": '{}'", app2unit_path));
             
             if patched_content != content {
                 fs::write(file_path, patched_content)?;

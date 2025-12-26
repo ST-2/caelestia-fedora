@@ -844,6 +844,8 @@ pub fn install_app2unit(dry_run: bool) -> Result<()> {
     
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        log::log_output(&stdout);
         log::log_error(&stderr);
         bail!("Failed to download app2unit");
     }
@@ -859,6 +861,8 @@ pub fn install_app2unit(dry_run: bool) -> Result<()> {
     
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        log::log_output(&stdout);
         log::log_error(&stderr);
         bail!("Failed to make app2unit executable");
     }
