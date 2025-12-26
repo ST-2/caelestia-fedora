@@ -91,11 +91,10 @@ pub fn patch_qml_app2unit(dry_run: bool) -> Result<()> {
         return Ok(());
     }
     
-    // Get username for home directory
+    // Get home directory path
     let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("~"));
-    let username = home_dir.file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("user");
+    let home_path = home_dir.to_str().unwrap_or("/home/user");
+    let app2unit_path = format!("{}/.local/bin/app2unit", home_path);
     
     // Find all QML files
     let output = Command::new("find")
@@ -125,12 +124,12 @@ pub fn patch_qml_app2unit(dry_run: bool) -> Result<()> {
         };
         
         // Check if file contains app2unit reference without absolute path
-        if content.contains("app2unit") && !content.contains(&format!("/home/{}", username)) {
+        if content.contains("app2unit") && !content.contains(&app2unit_path) {
             // Replace relative app2unit references with absolute path
             let patched_content = content
-                .replace("\"app2unit\"", &format!("\"/home/{}/.local/bin/app2unit\"", username))
-                .replace("'app2unit'", &format!("'/home/{}/.local/bin/app2unit'", username))
-                .replace("app2unit ", &format!("/home/{}/.local/bin/app2unit ", username));
+                .replace("\"app2unit\"", &format!("\"{}\"", app2unit_path))
+                .replace("'app2unit'", &format!("'{}'", app2unit_path))
+                .replace(" app2unit ", &format!(" {} ", app2unit_path));
             
             if patched_content != content {
                 fs::write(file_path, patched_content)?;
