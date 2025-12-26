@@ -87,6 +87,7 @@ const PACKAGES: &[&str] = &[
     "google-rubik-fonts",
     "fontawesome-fonts",
     // Utilities
+    "eza",
     "fastfetch",
     "btop",
     "wl-clipboard",
