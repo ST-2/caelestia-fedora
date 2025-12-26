@@ -101,7 +101,7 @@ const PACKAGES: &[&str] = &[
     "NetworkManager",
     "lxpolkit",
     // File Manager
-    "Thunar",
+    "thunar",
     // App Store
     "plasma-discover",
     "plasma-discover-flatpak",
