@@ -9,6 +9,147 @@ use crate::{log, ui};
 const DOTFILES_REPO: &str = "https://github.com/caelestia-dots/caelestia.git";
 const SHELL_REPO: &str = "https://github.com/caelestia-dots/shell.git";
 
+/// Create user configuration files for Hyprland
+pub fn create_user_configs(dry_run: bool) -> Result<()> {
+    let config_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from("~/.config"));
+    let caelestia_dir = config_dir.join("caelestia");
+    
+    ui::info("Creating Hyprland user configuration files...");
+    
+    if dry_run {
+        ui::success("Would create user configuration files (dry-run)");
+        return Ok(());
+    }
+    
+    // Create caelestia config directory
+    fs::create_dir_all(&caelestia_dir)?;
+    
+    // Create hypr-user.conf with touchpad and window rules
+    let hypr_user_conf = caelestia_dir.join("hypr-user.conf");
+    let hypr_user_content = r#"# User-specific Hyprland configuration
+
+# Touchpad settings
+input {
+    touchpad {
+        natural_scroll = false
+    }
+}
+
+# Windscribe window rules
+windowrulev2 = float, class:Windscribe
+windowrulev2 = center, class:Windscribe
+"#;
+    
+    if !hypr_user_conf.exists() {
+        fs::write(&hypr_user_conf, hypr_user_content)?;
+        ui::success(&format!("Created {:?}", hypr_user_conf));
+        log::log(&format!("Created hypr-user.conf at {:?}", hypr_user_conf));
+    } else {
+        ui::info("hypr-user.conf already exists, skipping...");
+    }
+    
+    // Create hypr-vars.conf with gestures and window metrics
+    let hypr_vars_conf = caelestia_dir.join("hypr-vars.conf");
+    let hypr_vars_content = r#"# User-specific Hyprland variables
+
+# Gesture settings
+$workspaceSwipeFingers = 3
+
+# Window metrics
+$windowGapsOut = 10
+$windowGapsIn = 5
+$windowBorderSize = 2
+"#;
+    
+    if !hypr_vars_conf.exists() {
+        fs::write(&hypr_vars_conf, hypr_vars_content)?;
+        ui::success(&format!("Created {:?}", hypr_vars_conf));
+        log::log(&format!("Created hypr-vars.conf at {:?}", hypr_vars_conf));
+    } else {
+        ui::info("hypr-vars.conf already exists, skipping...");
+    }
+    
+    ui::success("User configuration files created");
+    
+    Ok(())
+}
+
+/// Patch QML files to use absolute path for app2unit
+pub fn patch_qml_app2unit(dry_run: bool) -> Result<()> {
+    let config_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from("~/.config"));
+    let shell_dir = config_dir.join("quickshell/caelestia");
+    
+    ui::info("Patching QML files for app2unit absolute path...");
+    
+    if dry_run {
+        ui::success("Would patch QML files (dry-run)");
+        return Ok(());
+    }
+    
+    if !shell_dir.exists() {
+        ui::warning("Shell directory does not exist yet, skipping QML patching...");
+        return Ok(());
+    }
+    
+    // Get username for home directory
+    let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("~"));
+    let username = home_dir.file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("user");
+    
+    // Find all QML files
+    let output = Command::new("find")
+        .args([
+            shell_dir.to_str().unwrap(),
+            "-type", "f",
+            "-name", "*.qml"
+        ])
+        .output()?;
+    
+    if !output.status.success() {
+        ui::warning("Failed to find QML files");
+        return Ok(());
+    }
+    
+    let qml_files = String::from_utf8_lossy(&output.stdout);
+    let mut patched_count = 0;
+    
+    for file_path in qml_files.lines() {
+        if file_path.trim().is_empty() {
+            continue;
+        }
+        
+        let content = match fs::read_to_string(file_path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        
+        // Check if file contains app2unit reference without absolute path
+        if content.contains("app2unit") && !content.contains(&format!("/home/{}", username)) {
+            // Replace relative app2unit references with absolute path
+            let patched_content = content
+                .replace("\"app2unit\"", &format!("\"/home/{}/.local/bin/app2unit\"", username))
+                .replace("'app2unit'", &format!("'/home/{}/.local/bin/app2unit'", username))
+                .replace("app2unit ", &format!("/home/{}/.local/bin/app2unit ", username));
+            
+            if patched_content != content {
+                fs::write(file_path, patched_content)?;
+                ui::success(&format!("Patched {}", file_path));
+                log::log(&format!("Patched app2unit path in {}", file_path));
+                patched_count += 1;
+            }
+        }
+    }
+    
+    if patched_count > 0 {
+        ui::success(&format!("Patched {} QML file(s)", patched_count));
+    } else {
+        ui::info("No QML files needed patching");
+    }
+    
+    Ok(())
+}
+
 pub fn clone_repos(dry_run: bool) -> Result<()> {
     let local_share = dirs::data_local_dir().unwrap_or_else(|| PathBuf::from("~/.local/share"));
     let dotfiles_dir = local_share.join("caelestia");
