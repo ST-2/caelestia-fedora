@@ -1,4 +1,5 @@
 use anyhow::{bail, Result};
+use std::path::PathBuf;
 use std::process::Command;
 
 use crate::{log, ui};
@@ -99,6 +100,14 @@ const PACKAGES: &[&str] = &[
     "pamixer",
     "NetworkManager",
     "lxpolkit",
+    // File Manager
+    "thunar",
+    // App Store
+    "plasma-discover",
+    "plasma-discover-flatpak",
+    // CLI Utilities
+    "zoxide",
+    "fzf",
 ];
 
 pub fn install_all(dry_run: bool) -> Result<()> {
@@ -540,7 +549,7 @@ pub fn install_rust(dry_run: bool) -> Result<()> {
         Ok(())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        let stdout = String::from_utf8_lossy(&output.stdout);
+        let _stdout = String::from_utf8_lossy(&output.stdout);
         log::log_error(&stderr);
         bail!("Failed to install Rust");
     }
@@ -686,7 +695,7 @@ pub fn install_hyprland_qt_support(dry_run: bool) -> Result<()> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        let stdout = String::from_utf8_lossy(&output.stdout);
+        let _stdout = String::from_utf8_lossy(&output.stdout);
         log::log_error(&stderr);
         bail!("Failed to configure hyprland-qt-support");
     }
@@ -764,7 +773,7 @@ pub fn install_hyprland_qtutils(dry_run: bool) -> Result<()> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        let stdout = String::from_utf8_lossy(&output.stdout);
+        let _stdout = String::from_utf8_lossy(&output.stdout);
         log::log_error(&stderr);
         bail!("Failed to configure hyprland-qtutils");
     }
@@ -799,6 +808,68 @@ pub fn install_hyprland_qtutils(dry_run: bool) -> Result<()> {
         .status()?;
 
     ui::success("Installed hyprland-qtutils");
+    Ok(())
+}
+
+pub fn install_app2unit(dry_run: bool) -> Result<()> {
+    ui::info("Installing app2unit...");
+    
+    if dry_run {
+        ui::success("Would install app2unit (dry-run)");
+        return Ok(());
+    }
+    
+    let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("~"));
+    let bin_dir = home_dir.join(".local/bin");
+    let app2unit_path = bin_dir.join("app2unit");
+    
+    // Check if already installed
+    if app2unit_path.exists() {
+        ui::success("app2unit already installed");
+        return Ok(());
+    }
+    
+    // Create .local/bin if it doesn't exist
+    std::fs::create_dir_all(&bin_dir)?;
+    
+    // Download app2unit
+    ui::info("Downloading app2unit...");
+    let url = "https://raw.githubusercontent.com/VirtCode/app2unit/main/app2unit";
+    let cmd = format!("curl -L -o {:?} {}", app2unit_path, url);
+    log::log_command(&cmd);
+    
+    let output = Command::new("curl")
+        .args(["-L", "-o", app2unit_path.to_str().unwrap(), url])
+        .output()?;
+    
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        log::log_output(&stdout);
+        log::log_error(&stderr);
+        bail!("Failed to download app2unit");
+    }
+    
+    // Make executable
+    ui::info("Making app2unit executable...");
+    let cmd = format!("chmod +x {:?}", app2unit_path);
+    log::log_command(&cmd);
+    
+    let output = Command::new("chmod")
+        .args(["+x", app2unit_path.to_str().unwrap()])
+        .output()?;
+    
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        log::log_output(&stdout);
+        log::log_error(&stderr);
+        bail!("Failed to make app2unit executable");
+    }
+    
+    ui::success("app2unit installed successfully");
+    log::log("app2unit installation complete");
+    
     Ok(())
 }
 

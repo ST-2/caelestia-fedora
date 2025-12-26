@@ -50,7 +50,7 @@ fn run(cli: Cli) -> Result<()> {
         }
     }
 
-    let mut progress = ui::Progress::new(13);
+    let mut progress = ui::Progress::new(16);
 
     // Step 1: Pre-flight checks
     progress.step("Running pre-flight checks...");
@@ -83,31 +83,43 @@ fn run(cli: Cli) -> Result<()> {
     packages::install_fonts(cli.dry_run)?;
     dotfiles::clone_repos(cli.dry_run)?;
 
-    // Step 6: Install caelestia-cli
+    // Step 6: Install app2unit
+    progress.step("Installing app2unit...");
+    packages::install_app2unit(cli.dry_run)?;
+
+    // Step 7: Install caelestia-cli
     progress.step("Installing caelestia-cli...");
     cli::install_cli(cli.dry_run)?;
 
-    // Step 7: Symlink configs (before scheme init so paths exist)
+    // Step 8: Symlink configs (before scheme init so paths exist)
     progress.step("Symlinking configurations...");
     dotfiles::symlink_configs(cli.dry_run)?;
 
-    // Step 8: Initialize color scheme (after symlinks so ~/.config/hypr exists)
+    // Step 9: Create user configs
+    progress.step("Creating user configurations...");
+    dotfiles::create_user_configs(cli.dry_run)?;
+
+    // Step 10: Initialize color scheme (after symlinks so ~/.config/hypr exists)
     progress.step("Initializing color scheme...");
     cli::init_scheme(cli.dry_run)?;
 
-    // Step 9: Build shell widgets
+    // Step 11: Build shell widgets
     progress.step("Building caelestia-shell...");
     dotfiles::build_shell(cli.dry_run)?;
 
-    // Step 10: Set up shell (fish)
+    // Step 12: Patch QML files for app2unit
+    progress.step("Patching QML files...");
+    dotfiles::patch_qml_app2unit(cli.dry_run)?;
+
+    // Step 13: Set up shell (fish)
     progress.step("Setting up Fish shell...");
     shell::setup_all(cli.dry_run)?;
 
-    // Step 11: Set up keybinds
+    // Step 14: Set up keybinds
     progress.step("Setting up Hyprland keybinds...");
     keybinds::setup_keybinds(cli.dry_run)?;
 
-    // Step 12: Set up greetd (optional, may need confirmation)
+    // Step 15: Set up greetd (optional, may need confirmation)
     if cli.noconfirm || ui::prompt("Set up greetd/tuigreet as display manager?") {
         greetd::setup_all(cli.dry_run)?;
     }
